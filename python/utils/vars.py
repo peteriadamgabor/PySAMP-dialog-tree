@@ -1,0 +1,6 @@
+LOGGED_IN_PLAYERS = []
+
+HOUSES = []
+HOUSE_TYPES = []
+
+ITEMS = []
