@@ -2,7 +2,7 @@ from typing import Any
 
 from sqlalchemy import text
 
-from python.database import HOUSE_ENGINE
+from python.server.database import HOUSE_ENGINE
 from python.pickup.pickup import Pickup
 from pystreamer.dynamictextlabel import DynamicTextLabel
 from python.utils.colors import Color

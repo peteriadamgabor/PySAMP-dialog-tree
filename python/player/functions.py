@@ -1,16 +1,17 @@
 from Cryptodome.Hash import SHA3_512
 
 from pysamp import set_timer, kill_timer
+from pysamp.dialog import Dialog
 from python.player.dialogs import LOGIN_DIALOG
 from python.player.player import Player
 from python.utils.colors import Color
 from python.utils.player import LOGGED_IN_PLAYERS
 
 
-def handle_player_logon(args: tuple):
-    player = args[0]
+def handle_player_logon(player: Player):
+    player.game_text("  ", 1000, 2)
 
-    player.game_text("                                  ", 6000, 3)
+    player.hide_game_text(3)
 
     if player.is_registered:
         LOGIN_DIALOG.on_response = handel_login_dialog
@@ -47,10 +48,10 @@ def handel_login_dialog(player: Player, response: int, _, input_text: str) -> No
         kill_timer(player.timers["login_timer"])
         player.set_spawn_info(0, player.skin, 1287.3256, -1528.6997, 13.5457, 0, 0, 0, 0, 0, 0, 0)
         player.toggle_spectating(False)
-        LOGGED_IN_PLAYERS.append(player)
+        LOGGED_IN_PLAYERS[player.id] = player
         player.set_skin(170)
         player.is_logged_in = True
-        player.send_client_message(Color.GREEN,"(( Sikeresen bejelentkeztél! ))")
+        player.send_client_message(Color.GREEN, "(( Sikeresen bejelentkeztél! ))")
 
     else:
         player.send_client_message(Color.RED, "(( Hibás jelszó! ))")

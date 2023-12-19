@@ -1,17 +1,21 @@
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from sqlalchemy import text
 
 from pysamp.dialog import Dialog
 from pysamp.player import Player as BasePlayer
-from pysamp import set_timer, get_vehicle_z_angle
+from pysamp import set_timer, get_vehicle_z_angle, call_native_function
 import math
 
 from functools import wraps
-from ..database import PLAYER_ENGINE
-from ..utils.colors import Color
-from ..utils.house import get_houses_for_player
+
+from .inventory import Inventory
+from python.server.database import PLAYER_ENGINE
+from python.permission.role import Role
+from python.utils.colors import Color
+from python.utils.house import get_houses_for_player
+from python.utils.vars import VEHICLES, ROLES
 
 
 class Player(BasePlayer):
@@ -21,6 +25,8 @@ class Player(BasePlayer):
     _is_registered: bool = False
     _is_logged_in: bool = False
     block_for_pickup: bool = False
+    check_points: List = []
+    is_recording = False
 
     def __init__(self, player_id: int):
         super().__init__(player_id)
@@ -37,7 +43,7 @@ class Player(BasePlayer):
                     self._is_registered = True
 
             if not self._is_logged_in and self._is_registered:
-                query: text = text("SELECT id, password, money, skin, admin, sex, playedtime, birthdate FROM players "
+                query: text = text("SELECT id, password, money, skin, sex, playedtime, birthdate, role_id FROM players "
                                    "WHERE id = :id")
                 result = conn.execute(query, {'id': self._dbid}).fetchone()
 
@@ -45,10 +51,11 @@ class Player(BasePlayer):
                     self._password: str = result[1]
                     self._money: float = result[2]
                     self._skin: int = result[3]
-                    self._admin: int = result[4]
-                    self._sex: int = result[5]
-                    self._playedtime: int = result[6]
-                    self._birthdate: datetime.date = result[7]
+                    self._sex: int = result[4]
+                    self._playedtime: int = result[5]
+                    self._birthdate: datetime.date = result[6]
+                    self._inventory: Inventory = Inventory(self)
+                    self._role: Role = ROLES[result[7] - 1] if result[7] else None
 
                     self._houses = get_houses_for_player(self._dbid)
 
@@ -144,12 +151,26 @@ class Player(BasePlayer):
     def is_logged_in(self, value):
         self._is_registered = value
 
+    @property
+    def inventory(self):
+        return self._inventory
+
+    @property
+    def role(self):
+        return self._role
+
     # endregion Property
 
     # region Functions
     def kick_with_reason(self, reason: str, public=True):
         self.send_client_message(Color.RED, reason)
         set_timer(self.kick, 1000, False)
+
+    def get_vehicle(self):
+        return VEHICLES[self.get_vehicle_id()]
+
+    def in_vehicle(self) -> bool:
+        return VEHICLES[self.get_vehicle_id()] is not None
 
     def show_dialog(self, dialog: Dialog):
         dialog.show(self)
@@ -189,6 +210,10 @@ class Player(BasePlayer):
             target.send_client_message(Color.GREEN, f"(( {self.name} átadott neked {money} Ft-ot. ))")
 
         return True
+
+    def hide_game_text(self, style):
+        call_native_function("HideGameTextForPlayer", self.id, style)
+
     # endregion
 
     # region Registry
@@ -216,9 +241,9 @@ class Player(BasePlayer):
             return func(*args, **kwargs)
 
         return from_registry
+
     # endregion
 
 
 def _enable_pickup(player: Player):
     player.block_for_pickup = False
-

@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from python.database import HOUSE_ENGINE
+from python.server.database import HOUSE_ENGINE
 
 
 class HouseType:

@@ -1,14 +1,17 @@
 import os
 
-from pysamp import on_gamemode_init, set_game_mode_text, disable_interior_enter_exits, use_player_ped_anims, \
-    on_gamemode_exit
+from pysamp import on_gamemode_init
+from pysamp import set_game_mode_text
+from pysamp import disable_interior_enter_exits
+from pysamp import use_player_ped_anims
+from pysamp import on_gamemode_exit
+
 from . import command
 from . import utils
-from . import database
+from .server import database
 from . import player
 from . import pickup
 from . import house
-import samp
 
 from .server.functions import server_start
 
@@ -16,7 +19,8 @@ from .server.functions import server_start
 @on_gamemode_init
 def server_init():
     try:
-        samp.config(encoding="cp1252")
+
+        # samp.config(encoding="utf-8")
 
         set_game_mode_text("FayRPG 4.0")
         disable_interior_enter_exits()

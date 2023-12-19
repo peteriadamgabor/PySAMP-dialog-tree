@@ -1,8 +1,6 @@
-from typing import List
-
 from sqlalchemy import text
 
-from python.database import PLAYER_ENGINE
+from python.server.database import PLAYER_ENGINE
 from python.utils.vars import LOGGED_IN_PLAYERS
 
 
@@ -11,18 +9,16 @@ def _find_player_by_name(name: str):
 
 
 def _find_player_by_id(id: int):
-    return next((e for e in LOGGED_IN_PLAYERS if e.id == id), None)
+    return LOGGED_IN_PLAYERS[id]
 
 
 def is_valid_player(search_value: str | int):
     if not search_value:
         return None
 
-    if type(search_value) is int:
+    if type(search_value) is int or search_value.isdigit():
         return _find_player_by_id(int(search_value))
 
-    if search_value.isdigit():
-        return _find_player_by_id(int(search_value))
     else:
         return _find_player_by_name(search_value)
 
