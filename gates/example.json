@@ -1,0 +1,49 @@
+[
+
+  {
+    "speed": 1,
+    "auto": true,
+    "close_time": 3,
+    "fractions": [1],
+    "objects": [
+      {
+        "model_id": 1495,
+        "x": 244.88672,
+        "y": 72.541016,
+        "z": 1002.6406,
+        "rotation_x": 0.0,
+        "rotation_y": 0.0,
+        "rotation_z": 0.0,
+        "world_id": -1,
+        "interior_id": 6,
+        "stream_distance": 300.0,
+        "draw_distance": 0.0,
+        "move_x": 243.90706,
+        "move_y": 72.5691,
+        "move_z": 1002.6406,
+        "move_rotation_x": -1000.0,
+        "move_rotation_y": -1000.0,
+        "move_rotation_z": -1000.0
+      },
+      {
+        "model_id": 1495,
+        "x": 246.38281,
+        "y": 72.541016,
+        "z": 1002.6406,
+        "rotation_x": 0.0,
+        "rotation_y": 0.0,
+        "rotation_z": 0.0,
+        "world_id": -1,
+        "interior_id": 6,
+        "stream_distance": 300.0,
+        "draw_distance": 0.0,
+        "move_x": 247.33762,
+        "move_y": 72.5691,
+        "move_z": 1002.6406,
+        "move_rotation_x": -1000.0,
+        "move_rotation_y": -1000.0,
+        "move_rotation_z": -1000.0
+      }
+    ]
+  }
+]

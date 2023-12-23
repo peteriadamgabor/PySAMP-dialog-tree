@@ -43,5 +43,4 @@ def server_init():
 
 @on_gamemode_exit
 def server_exit():
-    print("stop")
-    os.remove("../log.txt")
+    pass

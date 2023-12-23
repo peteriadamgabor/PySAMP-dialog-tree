@@ -1,3 +1,5 @@
+from math import sqrt
+
 from sqlalchemy import text
 
 from pysamp import set_timer, kill_timer
@@ -6,6 +8,8 @@ from .player import Player
 from .timers import rout_create_handler
 from ..eSelect.eselect import Menu, MenuItem
 from ..fraction.fraction import Fraction
+from ..gate.gate import Gate
+from ..gate.gate_object import GateObject
 from ..job.rout import Rout
 from ..permission.functions import check_permission
 from ..server.database import MAIN_ENGINE
@@ -17,7 +21,7 @@ from ..utils.colors import Color
 from pysamp.vehicle import Vehicle as BaseVehicle
 from python.vehicle.vehicle import Vehicle
 from ..utils.python_helpers import try_pars_int
-from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, TELEPORTS, FRACTIONS
+from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, TELEPORTS, FRACTIONS, GATES
 
 
 @Player.command(arg_names=None)
@@ -253,3 +257,70 @@ def savedutypoint(player: Player, fraction_id: int, size: float = 3.0):
 
     fk: Fraction = FRACTIONS[int(fraction_id)]
     fk.load_duty_location()
+
+
+@Player.using_registry
+@Player.command
+def nyit(player: Player):
+    (x, y, z) = player.get_pos()
+    interior = player.get_interior()
+    vw = player.get_virtual_world()
+
+    gate = get_nearest_gate((x, y, z))
+
+    if gate:
+        gate.open()
+
+        if gate.auto:
+            player.send_client_message(Color.WHITE, f"(( A kapu / ajtó {gate.close_time} másodperc múlva záródik! ))")
+        else:
+            player.send_client_message(Color.WHITE, f"(( Ez a kapu / ajtó manuális, nem záródik autómatikusan! ))")
+
+    else:
+        player.send_client_message(Color.RED, "(( Nincs a közelben ajtó / kapu amit ki tudnál nyitni! ))")
+
+
+@Player.using_registry
+@Player.command
+def zar(player: Player):
+    (x, y, z) = player.get_pos()
+    interior = player.get_interior()
+    vw = player.get_virtual_world()
+
+    gate = get_nearest_gate((x, y, z))
+
+    if gate:
+        gate.close()
+
+    else:
+        player.send_client_message(Color.RED, "(( Nincs a közelben ajtó / kapu amit be tudnál zárni! ))")
+
+
+def get_nearest_gate(player_pos):
+
+    nearest_gate: Gate = GATES[0]
+    dist = calculate_dist(player_pos,
+                          (nearest_gate.objects[0].x, nearest_gate.objects[0].y, nearest_gate.objects[0].z))
+
+    for gate in GATES:
+        gate_object: GateObject = gate.objects[0]
+
+        now_dist = calculate_dist(player_pos, (gate_object.x, gate_object.y, gate_object.z))
+
+        if dist > now_dist:
+            dist = now_dist
+            nearest_gate = gate
+
+    if dist <= 5.0:
+        return nearest_gate
+    return None
+
+
+def calculate_dist(point1, point2):
+    x, y, z = point1
+    a, b, c = point2
+
+    distance = sqrt(pow(a - x, 2) +
+                    pow(b - y, 2) +
+                    pow(c - z, 2) * 1.0)
+    return distance

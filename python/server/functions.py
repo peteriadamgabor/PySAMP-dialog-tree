@@ -13,6 +13,7 @@ from python.house.house import House
 from python.house.housetype import HouseType
 from python.items.item import Item
 from python.server.console_log import console_log_loading
+from python.server.map_loader import load_maps, load_gates
 from python.teleports.teleport import Teleport
 from python.utils.vars import HOUSES, HOUSE_TYPES, ITEMS, VEHICLE_MODELS, VEHICLES, PERMISSION_TYPES, ROLES, \
     COMMAND_PERMISSIONS, SKINS, TELEPORTS, FRACTIONS, FRACTIONS_BY_CODE
@@ -37,6 +38,9 @@ def server_start():
     load_teleports()
 
     load_fractions()
+
+    load_maps()
+    load_gates()
 
 
 def set_up_py_samp():
@@ -207,6 +211,7 @@ def load_fractions():
         for row in rows:
             fraction = Fraction(*row)
             fraction.load_skins()
+            fraction.load_duty_location()
             FRACTIONS[fraction.id] = fraction
             FRACTIONS_BY_CODE[fraction.acronym] = fraction
 

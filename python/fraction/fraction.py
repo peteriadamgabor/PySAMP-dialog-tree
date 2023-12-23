@@ -48,4 +48,7 @@ class Fraction:
                     self.duty_points.append(dl)
 
     def is_valid_duty_point(self, zone_id: int):
-        return next((e for e in self.duty_points if e.zone.id == zone_id), None)
+        if self.duty_points:
+            return next((e for e in self.duty_points if e.zone.id == zone_id), None)
+
+        return None
