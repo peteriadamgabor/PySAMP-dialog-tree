@@ -2,8 +2,6 @@ import os
 
 from pysamp import on_gamemode_init
 from pysamp import set_game_mode_text
-from pysamp import disable_interior_enter_exits
-from pysamp import use_player_ped_anims
 from pysamp import on_gamemode_exit
 
 from . import command
@@ -12,9 +10,9 @@ from .server import database
 from . import player
 from . import pickup
 from . import house
+from .eSelect import eselect
 
-from .server.functions import server_start
-
+from .server.functions import server_start, set_up_py_samp
 
 @on_gamemode_init
 def server_init():
@@ -22,9 +20,9 @@ def server_init():
 
         # samp.config(encoding="utf-8")
 
+        set_up_py_samp()
+
         set_game_mode_text("FayRPG 4.0")
-        disable_interior_enter_exits()
-        use_player_ped_anims()
 
         print("+----------------------------------------+")
         print("|     Start populate server entities     |")

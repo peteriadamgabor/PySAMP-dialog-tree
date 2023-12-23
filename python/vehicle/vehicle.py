@@ -5,11 +5,12 @@ from sqlalchemy import text
 
 from pysamp.player import Player
 from python.server.database import VEHICLE_ENGINE
-from python.utils.vars import VEHICLE_MODELS
+from python.utils.vars import VEHICLE_MODELS, VEHICLE_VARIABLES
 from python.vehicle.fuletypes import Fuel_Type
 
 from pysamp.vehicle import Vehicle as BaseVehicle
 from python.vehicle.vehicle_model import VehicleModel
+from python.vehicle.vehicle_variable import VehicleVariable
 
 
 class Vehicle(BaseVehicle):
@@ -18,67 +19,74 @@ class Vehicle(BaseVehicle):
     def __init__(self, id: int):
         super().__init__(id)
 
-        with VEHICLE_ENGINE.connect() as conn:
-            query: text = text("SELECT id, model_id, x, y, z, angle, color_1, color_2, fuel_type_id, "
-                               "fill_type_id, fuel_level, locked, health, plate "
-                               "FROM vehicles WHERE in_game_id = :in_game_id")
-            result = conn.execute(query, {'in_game_id': id}).fetchone()
+        self._vehicle_variable: VehicleVariable = VEHICLE_VARIABLES[id]
 
-            self._id = id
-            self._dbid: int = result[0]
-            self._model: VehicleModel = VEHICLE_MODELS[result[1]]
-            self._x: float = result[2]
-            self._y: float = result[3]
-            self._z: float = result[4]
-            self._angle: float = result[5]
-            self._color_1: int = result[6]
-            self._color_2: int = result[7]
-            self._fuel_type_id: Fuel_Type = Fuel_Type(result[8])
-            self._fill_type_id: Fuel_Type = Fuel_Type(result[9])
-            self._fuel_level: float = result[10]
-            self._locked: bool = result[11]
-            self._health: float = result[12]
-            self._plate: str = result[13]
+        if not self._vehicle_variable:
 
-            self._passengers: set[Player] = set()
-            self._passenger_activity = []
+            self._vehicle_variable: VehicleVariable = VehicleVariable()
 
-            self._skip_check_damage = False
+            VEHICLE_VARIABLES[id] = self._vehicle_variable
+
+            with VEHICLE_ENGINE.connect() as conn:
+                query: text = text("SELECT id, model_id, x, y, z, angle, color_1, color_2, fuel_type_id, "
+                                   "fill_type_id, fuel_level, locked, health, plate "
+                                   "FROM vehicles WHERE in_game_id = :in_game_id")
+                result = conn.execute(query, {'in_game_id': id}).fetchone()
+
+                self._vehicle_variable.db_id = result[0]
+                self._vehicle_variable.model = VEHICLE_MODELS[result[1]]
+                self._vehicle_variable.x = result[2]
+                self._vehicle_variable.y = result[3]
+                self._vehicle_variable.z = result[4]
+                self._vehicle_variable.angle = result[5]
+                self._vehicle_variable.color_1 = result[6]
+                self._vehicle_variable.color_2 = result[7]
+                self._vehicle_variable.fuel_type_id = Fuel_Type(result[8])
+                self._vehicle_variable.fill_type_id = Fuel_Type(result[9])
+                self._vehicle_variable.fuel_level = result[10]
+                self._vehicle_variable.locked = result[11]
+                self._vehicle_variable.health = result[12]
+                self._vehicle_variable.plate = result[13]
+
+                self._vehicle_variable.passengers = set()
+                self._vehicle_variable.passenger_activity = []
+
+                self._vehicle_variable.skip_check_damage = False
 
     @property
     def model(self) -> VehicleModel:
-        return self._model
+        return self._vehicle_variable.model
 
     @property
     def plate(self) -> str:
-        return self._plate
+        return self._vehicle_variable.plate
 
     @property
     def skip_check_damage(self) -> bool:
-        return self._skip_check_damage
+        return self._vehicle_variable.skip_check_damage
 
     @skip_check_damage.setter
     def skip_check_damage(self, value: bool):
-        self._skip_check_damage = value
+        self._vehicle_variable.skip_check_damage = value
 
     @property
     def health(self) -> float:
-        return self._health
+        return self._vehicle_variable.health
 
     @health.setter
     def health(self, value: float):
         with VEHICLE_ENGINE.connect() as conn:
             query: text = text("UPDATE vehicles SET health = :health WHERE id = :id")
-            conn.execute(query, {'health': value, "id": self._dbid})
+            conn.execute(query, {'health': value, "id": self._vehicle_variable.db_id})
             conn.commit()
 
-        self._health = value
+        self._vehicle_variable.health = value
 
     def add_passenger(self, passenger):
-        self._passengers.add(passenger)
+        self._vehicle_variable.passengers.add(passenger)
 
     def remove_passenger(self, passenger):
-        self._passengers.remove(passenger)
+        self._vehicle_variable.passengers.remove(passenger)
 
     def log_passenger_activity(self, passenger, seat):
 
@@ -99,14 +107,14 @@ class Vehicle(BaseVehicle):
             case _:
                 seat_name = "egyébb ülés"
 
-        self._passenger_activity.append(f"{datetime.datetime.now(datetime.UTC).strftime('%y. %m. %d. %H:%M:%S')} (UTC) - {passenger} - {seat_name}")
+        self._vehicle_variable.passenger_activity.append(f"{datetime.datetime.now(datetime.UTC).strftime('%Y. %m. %d. %H:%M:%S')} (UTC) - {passenger} - {seat_name}")
 
     def get_passenger_activity(self):
-        return self._passenger_activity
+        return self._vehicle_variable.passenger_activity
 
     @property
     def passengers(self):
-        return self._passengers
+        return self._vehicle_variable.passengers
 
     # region Registry
     @classmethod

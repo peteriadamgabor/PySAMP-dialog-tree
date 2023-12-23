@@ -1,0 +1,1 @@
+AddCharModel(11, 20001, "Test1.dff", "Test1.txd");

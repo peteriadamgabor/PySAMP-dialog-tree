@@ -8,14 +8,13 @@ from python.items.playerinventoryitem import PlayerInventoryItem
 
 class Inventory:
 
-    def __init__(self, player):
+    def __init__(self, player_db_id: int):
 
         self._items: List[PlayerInventoryItem] = []
-        self._player = player
 
         with (ITEM_ENGINE.connect() as conn):
             query: text = text("SELECT id FROM player_inventors WHERE player_id = :id")
-            results = conn.execute(query, {'id': player.dbid}).all()
+            results = conn.execute(query, {'id': player_db_id}).all()
 
             self._items.extend(PlayerInventoryItem(result[0]) for result in results)
 
