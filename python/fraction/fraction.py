@@ -15,6 +15,7 @@ class Fraction:
     id: int
     name: str
     acronym: str
+    duty_every_where: bool
     skins: List[Skin] = None
     duty_points: List[DutyLocation] = None
 

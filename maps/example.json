@@ -12,6 +12,15 @@
     "interior_id": 0,
     "stream_distance": 300.0,
     "draw_distance": 0.0,
-    "static": false
+    "static": false,
+    "materials": [
+      {
+        "material_index":0,
+        "model_id": 0,
+        "txd_name": "none",
+        "texture_name": "none",
+        "material_color": 0
+      }
+    ]
   }
 ]

@@ -34,9 +34,17 @@ def load_maps():
                                                     draw_distance=object["draw_distance"],
                                                     stream_distance=object["stream_distance"])
 
+                    if "materials" in object:
+                        for material in object["materials"]:
+                            d_object.set_material(material["material_index"],
+                                                  material["model_id"],
+                                                  material["txd_name"],
+                                                  material["texture_name"],
+                                                  material["material_color"])
+
                     DYNAMIC_OBJECTS.append(d_object)
 
-            print(f"{mapp.replace('.json', '')} map successful loaded. Object Count: {len(objects)} ")
+            print(f"| {mapp.replace('.json', '')} map successful loaded. Object Count: {len(objects)} ")
 
 
 def load_gates():
@@ -53,7 +61,7 @@ def load_gates():
                 auto: bool
                 close_time: int
 
-                py_gate = Gate(gate["speed"], gate["auto"], gate["close_time"])
+                py_gate: Gate = Gate(gate["speed"], gate["auto"], gate["close_time"])
 
                 py_gate.objects = []
 
@@ -83,4 +91,4 @@ def load_gates():
 
                 GATES.append(py_gate)
 
-            print(f"{mapp.replace('.json', '')} gate successful loaded.")
+            print(f"| {mapp.replace('.json', '')} gate successful loaded.")

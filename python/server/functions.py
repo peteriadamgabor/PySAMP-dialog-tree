@@ -12,7 +12,6 @@ from python.server.database import MAIN_ENGINE
 from python.house.house import House
 from python.house.housetype import HouseType
 from python.items.item import Item
-from python.server.console_log import console_log_loading
 from python.server.map_loader import load_maps, load_gates
 from python.teleports.teleport import Teleport
 from python.utils.vars import HOUSES, HOUSE_TYPES, ITEMS, VEHICLE_MODELS, VEHICLES, PERMISSION_TYPES, ROLES, \
@@ -22,7 +21,6 @@ from python.vehicle.vehicle_model import VehicleModel
 
 
 def server_start():
-
     load_skins()
     load_house_types()
     load_vehicle_models()
@@ -39,14 +37,19 @@ def server_start():
 
     load_fractions()
 
+    print("Start load maps and gates")
+
     load_maps()
     load_gates()
+
+    print("End load maps and gates")
 
 
 def set_up_py_samp():
     register_callbacks()
     register_callback("OnPlayerFinishedDownloading", "ii")
     register_callback("OnPlayerRequestDownload", "iii")
+    register_callback("OnCheatDetected", "isii")
 
 
 def load_houses():
@@ -54,12 +57,12 @@ def load_houses():
         query: text = text("SELECT id FROM houses;")
         ids = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(ids)} houses...")
+        print(f"=> Start loging {len(ids)} houses...")
 
         for id in ids:
             HOUSES.append(House(id[0]))
 
-        console_log_loading(f"| => Houses are loaded!")
+        print(f"=> Houses are loaded!")
 
 
 def load_house_types():
@@ -67,12 +70,12 @@ def load_house_types():
         query: text = text("SELECT id FROM house_types;")
         ids = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(ids)} house types...")
+        print(f"=> Start loging {len(ids)} house types...")
 
         for id in ids:
             HOUSE_TYPES.append(HouseType(id[0]))
 
-        console_log_loading(f"| => House types are loaded!")
+        print(f"=> House types are loaded!")
 
 
 def load_items():
@@ -80,12 +83,12 @@ def load_items():
         query: text = text("SELECT id FROM items;")
         ids = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(ids)} items...")
+        print(f"=> Start loging {len(ids)} items...")
 
         for id in ids:
             ITEMS.append(Item(id[0]))
 
-        console_log_loading(f"| => Items are loaded!")
+        print(f"=> Items are loaded!")
 
 
 def load_vehicle_models():
@@ -93,13 +96,13 @@ def load_vehicle_models():
         query: text = text("SELECT * FROM vehicle_models;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} vehicle models...")
+        print(f"=> Start loging {len(rows)} vehicle models...")
 
         for row in rows:
             model = VehicleModel(*row)
             VEHICLE_MODELS[model.id - 399] = model
 
-        console_log_loading(f"| => Vehicle models are loaded!")
+        print(f"=> Vehicle models are loaded!")
 
 
 def load_vehicles():
@@ -107,7 +110,7 @@ def load_vehicles():
         query: text = text("SELECT id FROM vehicles;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} vehicles...")
+        print(f"=> Start loging {len(rows)} vehicles...")
 
         for i in range(len(rows)):
             query: text = text("UPDATE vehicles SET in_game_id = :in_game_id WHERE id = :id;")
@@ -122,9 +125,11 @@ def load_vehicles():
 
             veh.set_number_plate(veh.plate)
 
+            veh.is_registered = True
+
             VEHICLES[veh.id] = veh
 
-        console_log_loading(f"| => Vehicles are loaded!")
+        print(f"=> Vehicles are loaded!")
 
 
 def load_permission_types():
@@ -132,12 +137,12 @@ def load_permission_types():
         query: text = text("SELECT id, name, code FROM permission_types;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} permission types...")
+        print(f"=> Start loging {len(rows)} permission types...")
 
         for row in rows:
             PERMISSION_TYPES.append(PermissionType(*row))
 
-        console_log_loading(f"| => Permission types are loaded!")
+        print(f"=> Permission types are loaded!")
 
 
 def load_roles():
@@ -145,12 +150,12 @@ def load_roles():
         query: text = text("SELECT id, name FROM roles;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} roles...")
+        print(f"=> Start loging {len(rows)} roles...")
 
         for row in rows:
             ROLES.append(Role(*row))
 
-        console_log_loading(f"| => Roles types are loaded!")
+        print(f"=> Roles types are loaded!")
 
 
 def load_command_permissions():
@@ -158,12 +163,12 @@ def load_command_permissions():
         query: text = text("SELECT cmd_txt, permission_type_id, need_power FROM command_permissions;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} command permissions...")
+        print(f"=> Start loging {len(rows)} command permissions...")
 
         for row in rows:
             COMMAND_PERMISSIONS[row[0]] = CommandPermission(*row)
 
-        console_log_loading(f"| => Command permissions types are loaded!")
+        print(f"=> Command permissions types are loaded!")
 
 
 def load_skins():
@@ -171,12 +176,12 @@ def load_skins():
         query: text = text("SELECT * FROM skins order by id;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} skins...")
+        print(f"=> Start loging {len(rows)} skins...")
 
         for row in rows:
             SKINS.append(Skin(*row))
 
-        console_log_loading(f"| => Skins are loaded!")
+        print(f"=> Skins are loaded!")
 
 
 def load_teleports():
@@ -187,7 +192,7 @@ def load_teleports():
                            "FROM teleports order by id;")
         rows = conn.execute(query).fetchall()
 
-        console_log_loading(f"| => Start loging {len(rows)} teleports...")
+        print(f"=> Start loging {len(rows)} teleports...")
 
         for row in rows:
             teleport = Teleport(*row)
@@ -198,15 +203,15 @@ def load_teleports():
 
             TELEPORTS[zone.id] = teleport
 
-        console_log_loading(f"| => Teleports are loaded!")
+        print(f"=> Teleports are loaded!")
 
 
 def load_fractions():
     with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id, name, acronym FROM fractions order by id;")
+        query: text = text("SELECT * FROM fractions order by id;")
         rows = conn.execute(query).all()
 
-        console_log_loading(f"| => Start loging {len(rows)} fractions...")
+        print(f"=> Start loging {len(rows)} fractions...")
 
         for row in rows:
             fraction = Fraction(*row)
@@ -215,5 +220,4 @@ def load_fractions():
             FRACTIONS[fraction.id] = fraction
             FRACTIONS_BY_CODE[fraction.acronym] = fraction
 
-        console_log_loading(f"| => fractions are loaded!")
-
+        print(f"=> fractions are loaded!")

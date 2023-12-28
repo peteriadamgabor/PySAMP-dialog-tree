@@ -1,9 +1,10 @@
 {
-    "announce": true,
+    "announce": false,
     "artwork": {
         "cdn": "",
         "enable": true,
-        "models_path": "models"
+        "models_path": "models",
+        "port": 8080
     },
     "chat_input_filter": true,
     "enable_query": true,
@@ -24,7 +25,7 @@
         "use_chat_radius": false,
         "use_entry_exit_markers": false,
         "use_instagib": false,
-        "use_manual_engine_and_lights": false,
+        "use_manual_engine_and_lights": true,
         "use_nametag_los": true,
         "use_nametags": true,
         "use_player_marker_draw_radius": false,

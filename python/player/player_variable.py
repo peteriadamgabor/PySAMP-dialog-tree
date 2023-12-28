@@ -40,6 +40,7 @@ class PlayerVariable:
     dialog_vars: Dict[str, Any] = field(default_factory=dict)
     check_points: List = field(default_factory=list)
     houses: List = field(default_factory=list)
+    custom_vars: Dict[str, Any] = field(default_factory=dict)
 
     def load_player_relations(self, role_id: int | None, fraction_id: int | None):
 

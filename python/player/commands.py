@@ -3,25 +3,25 @@ from math import sqrt
 from sqlalchemy import text
 
 from pysamp import set_timer, kill_timer
+from .events import handle_engine_switch
 from .inventory_functions import show_player_inventory
 from .player import Player
+from .states import State
 from .timers import rout_create_handler
 from ..eSelect.eselect import Menu, MenuItem
 from ..fraction.fraction import Fraction
-from ..gate.gate import Gate
-from ..gate.gate_object import GateObject
 from ..job.rout import Rout
 from ..permission.functions import check_permission
 from ..server.database import MAIN_ENGINE
-from ..teleports.teleport import Teleport
+from ..server.functions import load_teleports
 from ..utils.car import get_model_id_by_name
 from ..utils.globals import MIN_VEHICLE_MODEL_ID, MAX_VEHICLE_MODEL_ID
-from ..utils.player import is_valid_player
+from ..utils.player import is_valid_player, get_nearest_gate
 from ..utils.colors import Color
 from pysamp.vehicle import Vehicle as BaseVehicle
 from python.vehicle.vehicle import Vehicle
 from ..utils.python_helpers import try_pars_int
-from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, TELEPORTS, FRACTIONS, GATES
+from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
 
 
 @Player.command(arg_names=None)
@@ -66,8 +66,39 @@ def newcar(player: Player, model_id: str | int, color1: int = 1, color2: int = 0
     angle: float = player.get_facing_angle() + 90 if player.get_facing_angle() < 0 else player.get_facing_angle() - 90
     x, y = player.get_x_y_in_front_of_player(5)
 
-    veh = BaseVehicle.create(model_id, x, y, z, angle, int(color1), int(color2), -1)
+    veh = Vehicle.create(model_id, x, y, z, angle, int(color1), int(color2), -1)
     veh.set_number_plate("NINCS")
+    VEHICLES[veh.id] = veh
+
+
+@Player.command(arg_names=["<color1>", "<color2>"])
+@Player.using_registry
+def newcarl(player: Player, color1: int = 1, color2: int = 0):
+    forbidden = [520, 425, 538, 570, 569, 537]
+
+    player.custom_vars["new_car_colors"] = (int(color1), int(color2))
+
+    menu = Menu(
+        'Autók',
+        [MenuItem(i, '', -15.0, 0.0, -45.0, 1, int(color1), int(color2)) for i in range(400, 612) if
+         i not in forbidden],
+        on_select=spawn_admin_car,
+    )
+
+    menu.show(player)
+
+
+@Player.using_registry
+def spawn_admin_car(player: Player, menu_item: MenuItem):
+    (_, _, z) = player.get_pos()
+    angle: float = player.get_facing_angle() + 90 if player.get_facing_angle() < 0 else player.get_facing_angle() - 90
+    x, y = player.get_x_y_in_front_of_player(5)
+
+    color1, color2 = player.custom_vars["new_car_colors"]
+
+    veh = Vehicle.create(menu_item.model_id, x, y, z, angle, int(color1), int(color2), -1)
+    veh.set_number_plate("NINCS")
+    VEHICLES[veh.id] = veh
 
 
 @Player.command(arg_names=None)
@@ -176,9 +207,30 @@ def change_skin(player: Player, menu_item: MenuItem):
 @Player.command
 @Player.using_registry
 def gotopos(player: Player, x: float, y: float, z: float, interior=0, vw=0):
+    pos: tuple[float, float, float] = player.get_pos()
+    p_interior: int = player.get_interior()
+    p_vw: int = player.get_virtual_world()
+    p_a: float = player.get_facing_angle()
+
+    player.custom_vars["back_pos"] = (pos, p_interior, p_vw, p_a)
     player.set_pos(float(x), float(y), float(z))
     player.set_interior(int(interior))
     player.set_virtual_world(int(vw))
+
+
+@Player.command
+@Player.using_registry
+def back(player: Player):
+    if player.custom_vars["back_pos"]:
+        (x, y, z) = player.custom_vars["back_pos"][0]
+        interior: int = player.custom_vars["back_pos"][1]
+        vw: int = player.custom_vars["back_pos"][2]
+        a: float = player.custom_vars["back_pos"][3]
+
+        player.set_pos(float(x), float(y), float(z))
+        player.set_interior(int(interior))
+        player.set_virtual_world(int(vw))
+        player.set_facing_angle(a)
 
 
 @Player.command
@@ -192,12 +244,12 @@ def getpos(player: Player):
 
 @Player.using_registry
 @Player.command(aliases=("duty",))
-def szolg(player: Player):
+def szolg(player: Player, type: int = 0):
     if not player.fraction:
         player.send_client_message(Color.RED, "(( Nem vagy egy frakció tagja se! ))")
         return
 
-    if not player.in_duty_point:
+    if not player.in_duty_point and not player.fraction:
         player.send_client_message(Color.RED, "(( Nem vagy a megfelelo helyen! ))")
         return
 
@@ -205,6 +257,7 @@ def szolg(player: Player):
         player.in_duty = False
         player.send_client_message(Color.GREEN, "(( Kiléptél a szolgálatból ))")
         player.set_skin(player.skin.id)
+        player.reset_weapons()
         return
 
     if not player.fraction_skin:
@@ -222,6 +275,10 @@ def szolg(player: Player):
     player.in_duty = True
     player.send_client_message(Color.GREEN, "(( Szolgalata alltal! ))")
     player.set_skin(player.fraction_skin.id)
+    player.reset_weapons()
+    player.give_weapon(3, 1)
+    player.give_weapon(41, 200)
+    player.give_weapon(24, 21)
 
 
 @Player.using_registry
@@ -296,31 +353,129 @@ def zar(player: Player):
         player.send_client_message(Color.RED, "(( Nincs a közelben ajtó / kapu amit be tudnál zárni! ))")
 
 
-def get_nearest_gate(player_pos):
+@Player.using_registry
+@Player.command
+def createteleport(player: Player, radius: float, description: str):
+    pos: tuple[float, float, float] = player.get_pos()
+    interior: int = player.get_interior()
+    vw: int = player.get_virtual_world()
+    a: float = player.get_facing_angle()
 
-    nearest_gate: Gate = GATES[0]
-    dist = calculate_dist(player_pos,
-                          (nearest_gate.objects[0].x, nearest_gate.objects[0].y, nearest_gate.objects[0].z))
+    if "teleport_data" not in player.custom_vars:
+        player.custom_vars["teleport_data"] = (pos, interior, vw, a, radius, description)
+        player.send_client_message(Color.GREEN, "(( Sikersenen mentetted a pontot! Menny a következohöz! ))")
+        return
 
-    for gate in GATES:
-        gate_object: GateObject = gate.objects[0]
+    else:
+        data = player.custom_vars["teleport_data"]
 
-        now_dist = calculate_dist(player_pos, (gate_object.x, gate_object.y, gate_object.z))
+        del player.custom_vars["teleport_data"]
 
-        if dist > now_dist:
-            dist = now_dist
-            nearest_gate = gate
+        mapper_from = {
+            'from_x': data[0][0],
+            'from_y': data[0][1],
+            'from_z': data[0][2],
+            'from_interior': data[1],
+            'from_vw': data[2],
+            'radius': data[4],
+            'to_x': pos[0],
+            'to_y': pos[1],
+            'to_z': pos[2],
+            'to_angel': a,
+            'to_interior': interior,
+            'to_vw': vw,
+            'description': data[5],
+        }
 
-    if dist <= 5.0:
-        return nearest_gate
-    return None
+        mapper_to = {
+            'from_x': pos[0],
+            'from_y': pos[1],
+            'from_z': pos[2],
+            'from_interior': interior,
+            'from_vw': vw,
+            'radius': radius,
+            'to_x': data[0][0],
+            'to_y': data[0][1],
+            'to_z': data[0][2],
+            'to_angel': data[3],
+            'to_interior': data[1],
+            'to_vw': data[2],
+            'description': description,
+        }
+
+        with MAIN_ENGINE.connect() as conn:
+            query: text = text(
+                "INSERT INTO teleports("
+                "from_x, from_y, from_z, from_interior, from_vw, radius, "
+                "to_x, to_y, to_z, to_angel, to_interior, to_vw, description)"
+                " VALUES (:from_x, :from_y, :from_z, :from_interior, :from_vw, :radius,"
+                " :to_x, :to_y, :to_z, :to_angel, :to_interior, :to_vw, :description);")
+            conn.execute(query, mapper_from)
+            conn.execute(query, mapper_to)
+            conn.commit()
+
+        player.send_client_message(Color.GREEN, "(( Sikersenen elmentetted a teleportot! Tölsd újra! ))")
 
 
-def calculate_dist(point1, point2):
-    x, y, z = point1
-    a, b, c = point2
+@Player.using_registry
+@Player.command
+def reloadteleports(player: Player):
+    load_teleports()
+    player.send_client_message(Color.LIGHT_RED, "(( Sikeresen újratöltötted a teleportokat! ))")
 
-    distance = sqrt(pow(a - x, 2) +
-                    pow(b - y, 2) +
-                    pow(c - z, 2) * 1.0)
-    return distance
+
+@Player.using_registry
+@Player.command
+def kor(player: Player, r: float):
+    x, y, z = player.get_pos()
+    player.set_checkpoint(x, y, z, float(r))
+
+
+@Player.using_registry
+@Player.command
+def torol(player: Player):
+    player.disable_checkpoint()
+
+
+@Player.using_registry
+@Player.command
+def indit(player: Player):
+    if player.get_state() != State.DRIVER:
+        player.send_client_message(Color.RED, "(( Nem vagy sofor! ))")
+        return
+
+    vehicle: Vehicle = player.get_vehicle()
+    handle_engine_switch(player, vehicle)
+
+
+@Player.using_registry
+@Player.command
+def leallit(player: Player):
+    if player.get_state() != State.DRIVER:
+        player.send_client_message(Color.RED, "(( Nem vagy sofor! ))")
+        return
+
+    vehicle: Vehicle = player.get_vehicle()
+    vehicle.engine = 0
+
+
+@Player.using_registry
+@Player.command
+def fixveh(player: Player):
+
+    vehicle: Vehicle = player.get_vehicle()
+
+    if vehicle:
+        vehicle.skip_check_damage = True
+        vehicle.repair()
+
+
+@Player.using_registry
+@Player.command
+def setvehhp(player: Player, health: float):
+
+    vehicle: Vehicle = player.get_vehicle()
+
+    if vehicle:
+        vehicle.skip_check_damage = True
+        vehicle.health = health

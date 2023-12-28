@@ -135,6 +135,8 @@ class MenuItem:
     rot_y: float = 0.
     rot_z: float = 0.
     zoom: float = 1.
+    color_1: int = 1
+    color_2: int = 0
 
 
 @dataclass
@@ -393,6 +395,9 @@ class PlayerMenu:
                                         item.rot_y,
                                         item.rot_z,
                                         item.zoom)
+
+        if item.model_id >= 400 or item.model_id <= 611:
+            item_model.set_preview_vehicle_color(item.color_1, item.color_2)
 
         pysamp.player_text_draw_show(self.player.id, item_model.id)
 

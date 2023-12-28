@@ -10,6 +10,7 @@ from .server import database
 from . import player
 from . import pickup
 from . import house
+from . import vehicle
 from .eSelect import eselect
 
 from .server.functions import server_start, set_up_py_samp
@@ -24,15 +25,11 @@ def server_init():
 
         set_game_mode_text("FayRPG 4.0")
 
-        print("+----------------------------------------+")
-        print("|     Start populate server entities     |")
-        print("+----------------------------------------+")
+        print("Start populate server entities")
 
         server_start()
 
-        print("+----------------------------------------+")
-        print("|     Population is finish successful    |")
-        print("+----------------------------------------+")
+        print("Population is finish successful")
 
     except Exception as ex:
         print("===================================================================\n"

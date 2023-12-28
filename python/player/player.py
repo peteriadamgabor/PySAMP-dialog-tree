@@ -24,6 +24,18 @@ class Player(BasePlayer):
         self._player_vars: PlayerVariable = PLAYER_VARIABLES[player_id]
 
         if not self._player_vars:
+            self.set_skill_level(0, 800)
+            self.set_skill_level(1, 999)
+            self.set_skill_level(2, 999)
+            self.set_skill_level(3, 999)
+            self.set_skill_level(4, 800)
+            self.set_skill_level(5, 999)
+            self.set_skill_level(6, 800)
+            self.set_skill_level(7, 999)
+            self.set_skill_level(8, 999)
+            self.set_skill_level(9, 999)
+            self.set_skill_level(10, 800)
+
             p_vars = PlayerVariable()
             p_vars.load(self.get_name())
             PLAYER_VARIABLES[player_id] = p_vars
@@ -177,6 +189,10 @@ class Player(BasePlayer):
         return self._player_vars.dialog_vars
 
     @property
+    def custom_vars(self):
+        return self._player_vars.custom_vars
+
+    @property
     def is_recording(self):
         return self._player_vars.is_recording
 
@@ -270,12 +286,12 @@ class Player(BasePlayer):
     # region Events
 
     @event("OnPlayerRequestDownload")
-    def request_download(cls, playerid: int, type: int, crc):
-        return (cls(playerid), type, crc)
+    def request_download(cls, player_id: int, type: int, crc):
+        return (cls(player_id), type, crc)
 
     @event("OnPlayerFinishedDownloading")
-    def finished_downloading(cls, playerid: int, virtualworld: int):
-        return (cls(playerid), virtualworld)
+    def finished_downloading(cls, player_id: int, virtualworld: int):
+        return (cls(player_id), virtualworld)
 
     # endregion
 
