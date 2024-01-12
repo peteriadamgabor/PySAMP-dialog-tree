@@ -4,9 +4,8 @@ import random
 from sqlalchemy import text
 
 from python.server.database import MAIN_ENGINE
-from python.utils.vars import VEHICLES, VEHICLE_VARIABLES
-from python.vehicle.vehicle import Vehicle
-from python.vehicle.vehicle_variable import VehicleVariable
+from python.utils.vars import VEHICLES
+from python.model.server import Vehicle
 
 
 @Vehicle.using_registry

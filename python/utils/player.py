@@ -2,8 +2,7 @@ from math import sqrt
 
 from sqlalchemy import text
 
-from python.gate.gate import Gate
-from python.gate.gate_object import GateObject
+from python.model.server import Gate, GateObject
 from python.server.database import PLAYER_ENGINE
 from python.utils.vars import LOGGED_IN_PLAYERS, GATES
 

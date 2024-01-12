@@ -1,16 +1,15 @@
 from pysamp.dialog import Dialog
-from python.items.item_types import ItemType
-from python.items.playerinventoryitem import PlayerInventoryItem
-from python.player.player import Player
-from python.utils.colors import Color
-from python.utils.dialog_style import DialogStyle
+from python.model.database import PlayerInventoryItem
+from python.model.server import Player
+from python.utils.enums.colors import Color
+from python.utils.enums.dialog_style import DialogStyle
 
 
 @Player.using_registry
 def show_player_inventory(player: Player):
     player.dialog_vars["selected_item"] = None
 
-    if not player.inventory.items:
+    if not player.items:
         player.send_client_message(Color.ORANGE, "(( Üres a táskád! ))")
         return
 
@@ -27,7 +26,7 @@ def handel_inventory_select(player: Player, response: int, list_item: int, input
     if not bool(response):
         return
 
-    item: PlayerInventoryItem = player.inventory.items[list_item]
+    item: PlayerInventoryItem = player.items[list_item]
 
     player.dialog_vars["selected_item"] = item
 

@@ -1,6 +1,6 @@
-from python.house.house import House
-from python.player.player import Player
-from python.utils.colors import Color
+from python.model.server import House
+from python.model.server import Player
+from python.utils.enums.colors import Color
 from python.utils.house import get_house_by_virtual_word
 
 

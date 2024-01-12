@@ -1,8 +1,10 @@
+from typing import Tuple, Any, Dict
+
 from pysamp import get_max_players
 
 SKINS = []
 
-TELEPORTS = [None] * 2000
+ZONES: Dict[int, Tuple[Any, Any]] = dict()
 
 PLAYER_VARIABLES = [None] * get_max_players()
 LOGGED_IN_PLAYERS = [None] * get_max_players()

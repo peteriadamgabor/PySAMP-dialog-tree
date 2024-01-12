@@ -2,9 +2,9 @@ import datetime
 
 from pysamp.dialog import Dialog
 from python.house.functions import enter_house
-from python.house.house import House
-from python.player.player import Player
-from python.utils.colors import Color
+from python.model.server import House
+from python.model.server import Player
+from python.utils.enums.colors import Color
 from datetime import date
 
 

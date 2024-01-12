@@ -1,17 +1,13 @@
-import os
+from pysamp import on_gamemode_init, on_gamemode_exit
 
-from pysamp import on_gamemode_init
-from pysamp import set_game_mode_text
-from pysamp import on_gamemode_exit
-
+from .model import database
+from .server import database
+from .zone import events
 from . import command
 from . import utils
-from .server import database
 from . import player
-from . import pickup
 from . import house
 from . import vehicle
-from .eSelect import eselect
 
 from .server.functions import server_start, set_up_py_samp
 
@@ -22,8 +18,6 @@ def server_init():
         # samp.config(encoding="utf-8")
 
         set_up_py_samp()
-
-        set_game_mode_text("FayRPG 4.0")
 
         print("Start populate server entities")
 

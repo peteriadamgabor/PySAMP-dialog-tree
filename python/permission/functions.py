@@ -1,9 +1,8 @@
 from typing import List
 
-from python.permission.command_permission import CommandPermission
-from python.permission.permission import Permission
-from python.permission.role import Role
-from python.player.player import Player
+from python.model.database import CommandPermission
+from python.model.database import Role
+from python.model.server import Player
 from python.utils.vars import COMMAND_PERMISSIONS
 
 

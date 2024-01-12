@@ -3,8 +3,7 @@ import os
 
 from pystreamer.dynamicobject import DynamicObject
 from pysamp.object import Object
-from python.gate.gate import Gate
-from python.gate.gate_object import GateObject
+from python.model.server import GateObject, Gate
 from python.utils.vars import GATES, STATIC_OBJECTS, DYNAMIC_OBJECTS
 
 

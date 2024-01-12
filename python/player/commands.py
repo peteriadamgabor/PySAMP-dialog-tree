@@ -1,36 +1,27 @@
-from math import sqrt
-
 from sqlalchemy import text
 
-from pysamp import set_timer, kill_timer
 from .events import handle_engine_switch
 from .inventory_functions import show_player_inventory
-from .player import Player
-from .states import State
-from .timers import rout_create_handler
-from ..eSelect.eselect import Menu, MenuItem
-from ..fraction.fraction import Fraction
-from ..job.rout import Rout
-from ..permission.functions import check_permission
+from python.model.server import Player, Vehicle
+from python.utils.enums.states import State
+from pyeSelect.eselect import Menu, MenuItem
 from ..server.database import MAIN_ENGINE
 from ..server.functions import load_teleports
 from ..utils.car import get_model_id_by_name
+from ..utils.enums.colors import Color
 from ..utils.globals import MIN_VEHICLE_MODEL_ID, MAX_VEHICLE_MODEL_ID
 from ..utils.player import is_valid_player, get_nearest_gate
-from ..utils.colors import Color
-from pysamp.vehicle import Vehicle as BaseVehicle
-from python.vehicle.vehicle import Vehicle
 from ..utils.python_helpers import try_pars_int
 from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
 
 
-@Player.command(arg_names=None)
+@Player.command
 @Player.using_registry
 def penztarca(player: Player):
     player.send_client_message(-1, f"((A pénztárcádban jelenleg {{00C0FF}} {player.money}Ft {{FFFFFF}}van.))")
 
 
-@Player.command(aliases=("addpenz",), arg_names=['id/név', "összeg"])
+@Player.command
 @Player.using_registry
 def givemoney(player: Player, target: str | int, value: float):
     target_player: Player | None = is_valid_player(target)
@@ -39,10 +30,10 @@ def givemoney(player: Player, target: str | int, value: float):
         player.send_client_message(Color.WHITE, "(( Nincs ilyen játékos! ))")
         return
 
-    target_player.money += value
+    target_player.money += float(value)
 
 
-@Player.command(arg_names=["model id / model name", "<color1>", "<color2>"])
+@Player.command
 @Player.using_registry
 def newcar(player: Player, model_id: str | int, color1: int = 1, color2: int = 0):
     if model_id.isdigit() and (int(model_id) > MAX_VEHICLE_MODEL_ID or MIN_VEHICLE_MODEL_ID > int(model_id)):
@@ -71,7 +62,7 @@ def newcar(player: Player, model_id: str | int, color1: int = 1, color2: int = 0
     VEHICLES[veh.id] = veh
 
 
-@Player.command(arg_names=["<color1>", "<color2>"])
+@Player.command
 @Player.using_registry
 def newcarl(player: Player, color1: int = 1, color2: int = 0):
     forbidden = [520, 425, 538, 570, 569, 537]
@@ -101,13 +92,13 @@ def spawn_admin_car(player: Player, menu_item: MenuItem):
     VEHICLES[veh.id] = veh
 
 
-@Player.command(arg_names=None)
+@Player.command
 @Player.using_registry
 def taska(player: Player):
     show_player_inventory(player)
 
 
-@Player.command(arg_names=None)
+@Player.command
 @Player.using_registry
 def oldplayer(player: Player, vehicle_id: int = -1):
     vehicle: Vehicle | None = None
@@ -124,25 +115,6 @@ def oldplayer(player: Player, vehicle_id: int = -1):
     player.send_client_message(-1, "(( Kocsiban ült játéksok: ))")
     for row in vehicle.get_passenger_activity():
         player.send_client_message(-1, f"(( {row} ))")
-
-
-@Player.using_registry
-@Player.command(arg_names=None, requires=(check_permission('recordrout'),))
-def recordrout(player: Player, freq: int, r: float = 5):
-    if player.is_recording:
-        kill_timer(player.timers["recordrout"])
-        player.send_client_message(Color.RED, "(( Utvonal rogzites befejezve ))")
-        player.disable_checkpoint()
-        return
-
-    player.timers["recordrout"] = set_timer(rout_create_handler, int(freq) * 1000, True, player, r)
-
-    player.send_client_message(Color.GREEN, f"(( Utvonal rogzites elkezdve. {freq} mp / checkpoint ))")
-
-    (x, y, z) = player.get_pos()
-    player.set_checkpoint(x, y, z, r)
-    player.check_points.append(Rout(x, y, z, r))
-    player.is_recording = True
 
 
 @Player.using_registry
@@ -240,51 +212,6 @@ def getpos(player: Player):
     a = player.get_facing_angle()
 
     player.send_client_message(Color.WHITE, f"(( X >> {x: .4f} | Y >> {y: .4f} | Z >> {z: .4f} | A >> {a: .4f} ))")
-
-
-@Player.using_registry
-@Player.command(aliases=("duty",))
-def szolg(player: Player, type: int = 0):
-    if not player.fraction:
-        player.send_client_message(Color.RED, "(( Nem vagy egy frakció tagja se! ))")
-        return
-
-    if not player.in_duty_point and not player.fraction:
-        player.send_client_message(Color.RED, "(( Nem vagy a megfelelo helyen! ))")
-        return
-
-    if player.in_duty:
-        player.in_duty = False
-        player.send_client_message(Color.GREEN, "(( Kiléptél a szolgálatból ))")
-        player.set_skin(player.skin.id)
-        player.reset_weapons()
-        return
-
-    if not player.fraction_skin:
-        player.send_client_message(Color.RED, "(( Nem megfelelo a szolgalati ruhad! Valasz egyet! ))")
-
-        menu = Menu(
-            'Frakcio ruhak',
-            [MenuItem(skin.id) for skin in player.fraction.skins if skin.sex == player.sex],
-            on_select=change_fk_skin,
-        )
-
-        menu.show(player)
-        return
-
-    player.in_duty = True
-    player.send_client_message(Color.GREEN, "(( Szolgalata alltal! ))")
-    player.set_skin(player.fraction_skin.id)
-    player.reset_weapons()
-    player.give_weapon(3, 1)
-    player.give_weapon(41, 200)
-    player.give_weapon(24, 21)
-
-
-@Player.using_registry
-def change_fk_skin(player: Player, menu_item: MenuItem):
-    player.send_client_message(Color.GREEN, "(( Sikeresen választottál ruhát! Allj szolgalatba! ))")
-    player.fraction_skin = menu_item.model_id
 
 
 @Player.using_registry
@@ -405,7 +332,7 @@ def createteleport(player: Player, radius: float, description: str):
 
         with MAIN_ENGINE.connect() as conn:
             query: text = text(
-                "INSERT INTO teleports("
+                "INSERT INTO zone("
                 "from_x, from_y, from_z, from_interior, from_vw, radius, "
                 "to_x, to_y, to_z, to_angel, to_interior, to_vw, description)"
                 " VALUES (:from_x, :from_y, :from_z, :from_interior, :from_vw, :radius,"
@@ -467,6 +394,7 @@ def fixveh(player: Player):
 
     if vehicle:
         vehicle.skip_check_damage = True
+        vehicle.health = 1_000
         vehicle.repair()
 
 

@@ -1,10 +1,8 @@
 import inspect
-from dataclasses import dataclass
-
-import samp
 import pysamp.commands
 
-from python.utils.colors import Color
+from dataclasses import dataclass
+from python.utils.enums.colors import Color
 
 
 @dataclass
@@ -39,6 +37,7 @@ ERROR_MESSAGE = pysamp.commands.BaseMessage(
 
 def cmd(*args, arg_names=None, **kwargs):
     ret = _original_cmd(*args, **kwargs)
+    print(pysamp.commands.dispatcher._commands)
     command = pysamp.commands.dispatcher._commands[-1]
     command.arg_names = arg_names
     command.error_message = ERROR_MESSAGE

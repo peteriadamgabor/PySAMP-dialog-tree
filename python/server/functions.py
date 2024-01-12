@@ -1,41 +1,25 @@
 from sqlalchemy import text
 
-from pysamp import register_callback
+from pysamp import register_callback, set_game_mode_text
 from pystreamer import register_callbacks
 from pystreamer.dynamiczone import DynamicZone
-from python.fraction.fraction import Fraction
-from python.permission.command_permission import CommandPermission
-from python.permission.permission_type import PermissionType
-from python.permission.role import Role
-from python.player.skin import Skin
-from python.server.database import MAIN_ENGINE
-from python.house.house import House
-from python.house.housetype import HouseType
-from python.items.item import Item
+
+from python.model.database import HouseModel, VehicleData, Teleport, DutyLocation
+from python.server.database import MAIN_SESSION
+from python.model.server import House
 from python.server.map_loader import load_maps, load_gates
-from python.teleports.teleport import Teleport
-from python.utils.vars import HOUSES, HOUSE_TYPES, ITEMS, VEHICLE_MODELS, VEHICLES, PERMISSION_TYPES, ROLES, \
-    COMMAND_PERMISSIONS, SKINS, TELEPORTS, FRACTIONS, FRACTIONS_BY_CODE
-from python.vehicle.vehicle import Vehicle
-from python.vehicle.vehicle_model import VehicleModel
+from python.utils.vars import *
+from python.utils.enums.zone_type import ZoneType
+from python.model.server import Vehicle
 
 
 def server_start():
-    load_skins()
-    load_house_types()
-    load_vehicle_models()
+    set_game_mode_text("FayRPG 4.0")
 
     load_houses()
-    load_items()
     load_vehicles()
-
-    load_permission_types()
-    load_roles()
-    load_command_permissions()
-
     load_teleports()
-
-    load_fractions()
+    load_duty_locations()
 
     print("Start load maps and gates")
 
@@ -52,172 +36,72 @@ def set_up_py_samp():
     register_callback("OnCheatDetected", "isii")
 
 
+def load_teleports():
+    with MAIN_SESSION() as session:
+        teleports = session.query(Teleport).all()
+
+        for i in range(len(teleports)):
+            teleport = teleports[i]
+            zone = DynamicZone.create_sphere(teleport.from_x, teleport.from_y, teleport.from_z,
+                                             1.0, world_id=teleport.from_vw, interior_id=teleport.from_interior)
+
+            ZONES[zone.id] = (zone, ZoneType.TELEPORT)
+            teleport.in_game_id = zone.id
+
+        session.commit()
+
+
+def load_duty_locations():
+    with MAIN_SESSION() as session:
+        duty_locations = session.query(DutyLocation).all()
+
+        for i in range(len(duty_locations)):
+            duty_location = duty_locations[i]
+            zone = DynamicZone.create_sphere(duty_location.x, duty_location.y, duty_location.z, duty_location.size,
+                                             world_id=duty_location.virtual_word, interior_id=duty_location.interior)
+
+            ZONES[zone.id] = (zone, ZoneType.DUTY_LOCATION)
+            duty_location.in_game_id = zone.id
+
+        session.commit()
+
+
 def load_houses():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id FROM houses;")
-        ids = conn.execute(query).fetchall()
+    with MAIN_SESSION() as session:
+        house_models = session.query(HouseModel).all()
 
-        print(f"=> Start loging {len(ids)} houses...")
-
-        for id in ids:
-            HOUSES.append(House(id[0]))
-
-        print(f"=> Houses are loaded!")
-
-
-def load_house_types():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id FROM house_types;")
-        ids = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(ids)} house types...")
-
-        for id in ids:
-            HOUSE_TYPES.append(HouseType(id[0]))
-
-        print(f"=> House types are loaded!")
-
-
-def load_items():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id FROM items;")
-        ids = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(ids)} items...")
-
-        for id in ids:
-            ITEMS.append(Item(id[0]))
-
-        print(f"=> Items are loaded!")
-
-
-def load_vehicle_models():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT * FROM vehicle_models;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} vehicle models...")
-
-        for row in rows:
-            model = VehicleModel(*row)
-            VEHICLE_MODELS[model.id - 399] = model
-
-        print(f"=> Vehicle models are loaded!")
+        for i in range(len(house_models)):
+            house_model = house_models[i]
+            HOUSES.append(House(house_model.id))
 
 
 def load_vehicles():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id FROM vehicles;")
-        rows = conn.execute(query).fetchall()
+    with MAIN_SESSION() as session:
+        vehicle_datas = session.query(VehicleData).all()
 
-        print(f"=> Start loging {len(rows)} vehicles...")
+        for i in range(len(vehicle_datas)):
+            vehicle_data = vehicle_datas[i]
+            vehicle_data.in_game_id = i + 1
 
-        for i in range(len(rows)):
-            query: text = text("UPDATE vehicles SET in_game_id = :in_game_id WHERE id = :id;")
-            conn.execute(query, {'in_game_id': i + 1, 'id': rows[i][0]})
-            conn.commit()
+        session.commit()
 
-            query: text = text(
-                "SELECT model_id + 399, x, y, z, angle, color_1, color_2, 5000 FROM vehicles WHERE id = :id;")
-            data = conn.execute(query, {'id': rows[i][0]}).one_or_none()
+    with MAIN_SESSION() as session:
+        vehicle_datas = session.query(VehicleData).all()
 
-            veh = Vehicle.create(*data)
+        for i in range(len(vehicle_datas)):
+            vehicle_data = vehicle_datas[i]
 
-            veh.set_number_plate(veh.plate)
+            model_id: int = vehicle_data.model_id + 399
+            x: float = vehicle_data.x
+            y: float = vehicle_data.y
+            z: float = vehicle_data.z
+            angle: float = vehicle_data.angle
+            color_1: int = vehicle_data.color_1
+            color_2: int = vehicle_data.color_2
+
+            veh = Vehicle.create(model_id, x, y, z, angle, color_1, color_2, 5000)
+            veh.set_number_plate(vehicle_data.plate)
 
             veh.is_registered = True
 
             VEHICLES[veh.id] = veh
-
-        print(f"=> Vehicles are loaded!")
-
-
-def load_permission_types():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id, name, code FROM permission_types;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} permission types...")
-
-        for row in rows:
-            PERMISSION_TYPES.append(PermissionType(*row))
-
-        print(f"=> Permission types are loaded!")
-
-
-def load_roles():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT id, name FROM roles;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} roles...")
-
-        for row in rows:
-            ROLES.append(Role(*row))
-
-        print(f"=> Roles types are loaded!")
-
-
-def load_command_permissions():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT cmd_txt, permission_type_id, need_power FROM command_permissions;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} command permissions...")
-
-        for row in rows:
-            COMMAND_PERMISSIONS[row[0]] = CommandPermission(*row)
-
-        print(f"=> Command permissions types are loaded!")
-
-
-def load_skins():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT * FROM skins order by id;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} skins...")
-
-        for row in rows:
-            SKINS.append(Skin(*row))
-
-        print(f"=> Skins are loaded!")
-
-
-def load_teleports():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT from_x, from_y, from_z, "
-                           "from_interior, from_vw, radius, "
-                           "to_x, to_y, to_z, to_angel, to_interior, to_vw, description "
-                           "FROM teleports order by id;")
-        rows = conn.execute(query).fetchall()
-
-        print(f"=> Start loging {len(rows)} teleports...")
-
-        for row in rows:
-            teleport = Teleport(*row)
-            zone = DynamicZone.create_sphere(teleport.from_x, teleport.from_y, teleport.from_z,
-                                             1.0, world_id=teleport.from_vw, interior_id=teleport.from_interior)
-
-            teleport.zone = zone
-
-            TELEPORTS[zone.id] = teleport
-
-        print(f"=> Teleports are loaded!")
-
-
-def load_fractions():
-    with MAIN_ENGINE.connect() as conn:
-        query: text = text("SELECT * FROM fractions order by id;")
-        rows = conn.execute(query).all()
-
-        print(f"=> Start loging {len(rows)} fractions...")
-
-        for row in rows:
-            fraction = Fraction(*row)
-            fraction.load_skins()
-            fraction.load_duty_location()
-            FRACTIONS[fraction.id] = fraction
-            FRACTIONS_BY_CODE[fraction.acronym] = fraction
-
-        print(f"=> fractions are loaded!")

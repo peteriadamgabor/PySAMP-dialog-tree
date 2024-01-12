@@ -1,6 +1,5 @@
-from python.house.house import House
-from python.player.player import Player
-from python.utils.colors import Color
+from python.model.server import House, Player
+from python.utils.enums.colors import Color
 
 
 def enter_house(player: Player, house: House):

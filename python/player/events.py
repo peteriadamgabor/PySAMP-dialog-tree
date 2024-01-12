@@ -1,17 +1,17 @@
 import random
 
-import quantumrandom
+from Cryptodome.Hash import SHA3_512
 
-from pysamp import set_timer, registry
+from pysamp import set_timer, kill_timer
 
-from .functions import set_spawn_camera, handle_player_logon
 from python.utils.player import LOGGED_IN_PLAYERS
-from .states import State
-from ..utils.colors import Color
+from .dialogs import LOGIN_DIALOG
+from python.utils.enums.states import State
+from python.utils.enums.colors import Color
 from ..utils.vars import VEHICLES, PLAYER_VARIABLES
 from ..vehicle.functions import start_engine
-from ..vehicle.vehicle import Vehicle
-from python.player.player import Player
+from python.model.server import Vehicle
+from python.model.server import Player
 
 
 @Player.on_request_class
@@ -78,8 +78,8 @@ def on_update(player: Player):
             if (damage := round(vehicle.health - vehicle.get_health(), 0)) > 0:
                 on_vehicle_damage(player, vehicle, damage)
 
-        vehicle.health = vehicle.get_health()
-        vehicle.update_damage()
+            vehicle.health = vehicle.get_health()
+            vehicle.update_damage()
 
 
 def on_vehicle_damage(player: Player, vehicle: Vehicle, damage: float):
@@ -218,3 +218,55 @@ def do_start_engine(args):
         vehicle.engine = 1
 
     vehicle.is_starting = False
+
+
+def handle_player_logon(player: Player):
+    player.game_text("  ", 1000, 2)
+
+    player.hide_game_text(3)
+
+    if player.is_registered:
+        LOGIN_DIALOG.on_response = handel_login_dialog
+        player.show_dialog(LOGIN_DIALOG)
+        player.timers["login_timer"] = set_timer(player.kick_with_reason, 180000, False,
+                                                 (
+                                                     """((Nem léptél be meghatározott időn belül, "
+                                                     "azért a rendszer kirúgott.))""",)
+                                                 )
+
+    else:
+        player.kick_with_reason("(( Nincs ilyen felhasználó ))")
+
+
+def set_spawn_camera(player: Player):
+    player.set_pos(1122.3563232422, -2036.9317626953, 67)
+    player.set_camera_position(1308.4593505859, -2038.3280029297, 102.23148345947)
+    player.set_camera_look_at(1122.3563232422, -2036.9317626953, 69.543991088867)
+
+
+@Player.using_registry
+def handel_login_dialog(player: Player, response: int, _, input_text: str) -> None:
+
+    if not bool(response):
+        player.kick_with_reason("(( Nem adtál meg jelszót! ))")
+        return
+
+    h_obj = SHA3_512.new()
+    hash_str = h_obj.update(input_text.encode()).hexdigest()
+
+    if hash_str == player.password:
+        kill_timer(player.timers["login_timer"])
+        player.is_logged_in = True
+        LOGGED_IN_PLAYERS[player.id] = player
+
+        player.set_spawn_info(0, player.skin.id, 1287.3256, -1528.6997, 13.5457, 0, 0, 0, 0, 0, 0, 0)
+        player.toggle_spectating(False)
+        player.set_skin(player.skin.id)
+
+        player.send_client_message(Color.GREEN, "(( Sikeresen bejelentkeztél! ))")
+
+    else:
+        player.send_client_message(Color.RED, "(( Hibás jelszó! ))")
+        LOGIN_DIALOG.on_response = handel_login_dialog
+        player.show_dialog(LOGIN_DIALOG)
+    return

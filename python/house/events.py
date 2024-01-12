@@ -1,8 +1,8 @@
 from pysamp.dialog import Dialog
 from python.house.dialoghandler import handel_for_sale_dialog, handel_owner_dialog, handel_house_guest
-from python.house.house import House
-from python.pickup.pickup import Pickup
-from python.player.player import Player
+from python.model.server import House
+from python.model.server import Pickup
+from python.model.server import Player
 from python.utils.house import get_house_by_pickup_id
 
 
@@ -34,7 +34,7 @@ def on_player_pick_up_pickup(player: Player, pickup: Pickup):
         handler = handel_for_sale_dialog
 
     if house.owner:
-        name, player_dbid = house.owner
+        name, player_dbid = house.owner.name, house.owner.id
 
         title = f"{name.replace('_', ' ')} {'tulajdona' if house.type == 0 else 'bérli'}"
         button1 = "Kiválaszt"
