@@ -4,7 +4,6 @@ from typing import List, Set
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Boolean, Table
 from sqlalchemy.orm import DeclarativeBase, relationship
 
-from pystreamer.dynamiczone import DynamicZone
 from python.server.database import LOADER_ENGINE
 
 
@@ -293,6 +292,47 @@ class Teleport(Base):
     to_vw: int = Column(Integer)
     description: str = Column(String)
     in_game_id: int = Column(Integer)
+
+
+class InteriorModel(Base):
+    __tablename__ = 'interiors'
+
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String)
+    x: float = Column(Float)
+    y: float = Column(Float)
+    z: float = Column(Float)
+    a: float = Column(Float)
+    interior: int = Column(Integer)
+    in_game_id: int = Column(Integer)
+
+
+class BusinessType(Base):
+    __tablename__ = 'business_types'
+
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String)
+    code: str = Column(String)
+
+
+class BusinessModel(Base):
+    __tablename__ = 'business'
+    __allow_unmapped__ = True
+
+    id: int = Column(Integer, primary_key=True)
+    in_game_id: int = Column(Integer)
+    business_type_id: int = Column(Integer, ForeignKey("business_types.id"))
+    model: "BusinessType" = relationship("BusinessType")
+    interior_id: int = Column(Integer, ForeignKey("interiors.id"))
+    interior: "InteriorModel" = relationship("InteriorModel")
+    name: str = Column(String)
+    x: float = Column(Float)
+    y: float = Column(Float)
+    z: float = Column(Float)
+    a: float = Column(Float)
+    locked: bool = Column(Boolean)
+    is_company: bool = Column(Boolean)
+    company_chain: int = Column(Integer)
 
 
 Base.metadata.create_all(bind=LOADER_ENGINE)

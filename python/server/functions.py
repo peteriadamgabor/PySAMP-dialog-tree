@@ -1,12 +1,13 @@
+from typing import List
+
 from sqlalchemy import text
 
 from pysamp import register_callback, set_game_mode_text
 from pystreamer import register_callbacks
-from pystreamer.dynamiczone import DynamicZone
 
-from python.model.database import HouseModel, VehicleData, Teleport, DutyLocation
+from python.model.database import HouseModel, VehicleData, Teleport, DutyLocation, Skin, BusinessModel, InteriorModel
 from python.server.database import MAIN_SESSION
-from python.model.server import House
+from python.model.server import House, DynamicZone, Business, Interior
 from python.server.map_loader import load_maps, load_gates
 from python.utils.vars import *
 from python.utils.enums.zone_type import ZoneType
@@ -20,6 +21,8 @@ def server_start():
     load_vehicles()
     load_teleports()
     load_duty_locations()
+    load_business()
+    load_interiors()
 
     print("Start load maps and gates")
 
@@ -45,7 +48,10 @@ def load_teleports():
             zone = DynamicZone.create_sphere(teleport.from_x, teleport.from_y, teleport.from_z,
                                              1.0, world_id=teleport.from_vw, interior_id=teleport.from_interior)
 
-            ZONES[zone.id] = (zone, ZoneType.TELEPORT)
+            zone.zone_type = ZoneType.TELEPORT
+
+            ZONES[zone.id] = zone
+
             teleport.in_game_id = zone.id
 
         session.commit()
@@ -60,7 +66,10 @@ def load_duty_locations():
             zone = DynamicZone.create_sphere(duty_location.x, duty_location.y, duty_location.z, duty_location.size,
                                              world_id=duty_location.virtual_word, interior_id=duty_location.interior)
 
-            ZONES[zone.id] = (zone, ZoneType.DUTY_LOCATION)
+            zone.zone_type = ZoneType.DUTY_LOCATION
+
+            ZONES[zone.id] = zone
+
             duty_location.in_game_id = zone.id
 
         session.commit()
@@ -72,7 +81,22 @@ def load_houses():
 
         for i in range(len(house_models)):
             house_model = house_models[i]
-            HOUSES.append(House(house_model.id))
+            house = House(house_model.id)
+
+            HOUSES[house.pickup.id] = house
+
+
+def load_business():
+    with MAIN_SESSION() as session:
+        business_models: List[BusinessModel] = session.query(BusinessModel).all()
+
+        for i in range(len(business_models)):
+            business_model: BusinessModel = business_models[i]
+            business = Business(business_model.id)
+
+            BUSINESSES[business.pickup.id] = business
+
+            business.in_game_id = i
 
 
 def load_vehicles():
@@ -105,3 +129,17 @@ def load_vehicles():
             veh.is_registered = True
 
             VEHICLES[veh.id] = veh
+
+
+def load_interiors():
+    with MAIN_SESSION() as session:
+        interiors = session.query(InteriorModel).all()
+
+        for i in range(len(interiors)):
+            interior = interiors[i]
+
+            INTERIORS[i] = Interior(i, interior.x, interior.y, interior.z,  interior.interior)
+
+            interior.in_game_id = i
+
+        session.commit()

@@ -9,7 +9,7 @@ from .dialogs import LOGIN_DIALOG
 from python.utils.enums.states import State
 from python.utils.enums.colors import Color
 from ..utils.vars import VEHICLES, PLAYER_VARIABLES
-from ..vehicle.functions import start_engine
+from ..vehicle.functions import start_engine, handle_engine_switch
 from python.model.server import Vehicle
 from python.model.server import Player
 
@@ -79,14 +79,19 @@ def on_update(player: Player):
                 on_vehicle_damage(player, vehicle, damage)
 
             vehicle.health = vehicle.get_health()
-            vehicle.update_damage()
+
+            if vehicle.is_registered:
+                vehicle.update_damage()
 
 
 def on_vehicle_damage(player: Player, vehicle: Vehicle, damage: float):
-    if damage % 5 == 0:
+
+    if damage % 5 == 0 and vehicle.skip_check_damage:
         return
 
-    match vehicle.model.id:
+    vehicle.skip_check_damage = True
+
+    match vehicle.get_model():
         case 543 | 605:
             damage *= 1.95
 
@@ -160,64 +165,6 @@ def on_key_state_change(player: Player, new_keys: int, old_keys: int):
             vehicle.engine = 0
             vehicle.get_damage_status()
             player.game_text("~r~Lefulladt az auto", 3000, 3)
-
-
-def handle_engine_switch(player: Player, vehicle: Vehicle):
-    if vehicle.is_starting:
-        player.send_client_message(Color.RED, "(( Már indítod! ))")
-        return
-
-    if vehicle.engine:
-        vehicle.engine = 0
-        return
-
-    vehicle.is_starting = True
-
-    if 600.0 <= vehicle.get_health() < 800.0:
-        timer_time = 2
-
-    elif 500.0 <= vehicle.get_health() < 600.0:
-        timer_time = 5
-
-    elif 400.0 <= vehicle.get_health() < 500.0:
-        timer_time = 10
-
-    elif 400.0 >= vehicle.get_health():
-        timer_time = 15
-
-    else:
-        timer_time = 1
-
-    player.game_text("~w~Inditas...", timer_time * 1000, 3)
-
-    set_timer(do_start_engine, timer_time * 1000, False, (player, vehicle))
-
-
-def do_start_engine(args):
-
-    player = args[0]
-    vehicle = args[1]
-
-    if not start_engine(vehicle):
-        player.game_text("~r~Lefulladt", 3000, 3)
-        if 600.0 <= vehicle.get_health() < 800.0:
-            player.send_client_message(Color.WHITE, "(( Nem ártana elnézni a szervízbe! ))")
-
-        elif 500.0 <= vehicle.get_health() < 600.0:
-            player.send_client_message(Color.WHITE, "(( El kellene menni a szervízbe! ))")
-
-        elif 400.0 <= vehicle.get_health() < 500.0:
-            player.send_client_message(Color.WHITE, "(( Surgosen menj szervízbe! ))")
-
-        elif 400.0 >= vehicle.get_health():
-            player.send_client_message(Color.WHITE, "(( Hívj szerelot, aki megjavítja a jármuvet! ))")
-
-        vehicle.engine = 0
-
-    else:
-        vehicle.engine = 1
-
-    vehicle.is_starting = False
 
 
 def handle_player_logon(player: Player):

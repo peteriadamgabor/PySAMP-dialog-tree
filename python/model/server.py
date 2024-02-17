@@ -2,7 +2,7 @@ import math
 import datetime
 import threading
 
-from typing import List, Any
+from typing import List, Callable
 from functools import wraps
 from dataclasses import dataclass
 
@@ -13,10 +13,11 @@ from pysamp import set_timer, get_vehicle_z_angle, call_native_function
 from pystreamer.dynamicobject import DynamicObject
 from pystreamer.dynamictextlabel import DynamicTextLabel
 
-from .database import PlayerModel, Skin, PlayerParameter, Fraction, VehicleData, VehicleModel, HouseModel, HouseType
-from python.server.database import PLAYER_SESSION, VEHICLE_SESSION, HOUSE_SESSION
+from .database import PlayerModel, Skin, PlayerParameter, Fraction, VehicleData, VehicleModel, HouseModel, HouseType, \
+    BusinessModel, InteriorModel
+from python.server.database import PLAYER_SESSION, VEHICLE_SESSION, HOUSE_SESSION, BUSINESS_SESSION
 from python.utils.enums.colors import Color
-from python.utils.vars import VEHICLES, PLAYER_VARIABLES, VEHICLE_VARIABLES
+from python.utils.vars import VEHICLES, PLAYER_VARIABLES, VEHICLE_VARIABLES, PICKUPS, DYNAMIC_PICKUPS, ZONES
 from .variable import PlayerVariable, VehicleVariable
 
 from pysamp.pickup import Pickup as BasePickup
@@ -24,6 +25,10 @@ from python.utils.enums.pickuptype import PickupType
 
 from python.utils.enums.gate_state import GateState
 from pysamp.vehicle import Vehicle as BaseVehicle
+
+from pystreamer.dynamicpickup import DynamicPickup as BaseDynamicPickup
+from pystreamer.dynamiczone import DynamicZone as BaseDynamicZone
+from ..utils.enums.zone_type import ZoneType
 
 
 # region Player
@@ -446,16 +451,107 @@ def _enable_use_teleport(player: Player):
 
 class Pickup(BasePickup):
 
-    def __int__(self, pickup_id: int, type: PickupType = None):
-        super().__init__(pickup_id)
+    def __init__(self, id: int):
+        super().__init__(id)
+        self._pickup_type: PickupType | None = None
 
-        self._type: PickupType = type
+    @property
+    def pickup_type(self) -> PickupType:
+        return self._pickup_type
+
+    @pickup_type.setter
+    def pickup_type(self, pickup_type: PickupType) -> None:
+        self._pickup_type = pickup_type
 
     def set_model(self, model_id):
         return call_native_function("SetPickupModel", self.id, model_id, True)
 
+    @classmethod
+    def create(
+            cls,
+            model: int,
+            type: int,
+            x: float,
+            y: float,
+            z: float,
+            virtual_world: int = 0,
+            pickup_type: PickupType = None
+    ) -> "Pickup":
+        super_pickup = super().create(model, type, x, y, z, virtual_world)
+        return super_pickup
+
+
+class DynamicPickup(BaseDynamicPickup):
+
+    def __init__(self, id: int):
+        super().__init__(id)
+        self._pickup_type: PickupType | None = None
+
+    @property
+    def pickup_type(self) -> PickupType:
+        return self._pickup_type
+
+    @pickup_type.setter
+    def pickup_type(self, pickup_type: PickupType) -> None:
+        self._pickup_type = pickup_type
+
+    @classmethod
+    def create(
+            cls,
+            model_id: int,
+            type: int,
+            x: float,
+            y: float,
+            z: float,
+            world_id: int = -1,
+            interior_id: int = -1,
+            player_id: int = -1,
+            stream_distance: float = 200.0,
+            area_id: int = -1,
+            priority: int = 0,
+    ) -> "DynamicPickup":
+        super_pickup = super().create(model_id, type, x, y, z, world_id, interior_id, player_id, stream_distance,
+                                      area_id, priority)
+
+        return super_pickup
+
 
 # endregion Pickup
+
+
+# region Zone
+
+class DynamicZone(BaseDynamicZone):
+
+    def __init__(self, id: int):
+        super().__init__(id)
+        self._zone_type: ZoneType | None = None
+
+    @classmethod
+    def create_sphere(
+            cls,
+            x: float,
+            y: float,
+            z: float,
+            size: float,
+            world_id: int = -1,
+            interior_id: int = -1,
+            player_id: int = -1,
+            priority: int = 0,
+    ) -> "DynamicZone":
+        super_zone = super().create_sphere(x, y, z, size, world_id, interior_id, player_id, priority)
+        return super_zone
+
+    @property
+    def zone_type(self) -> ZoneType:
+        return self._zone_type
+
+    @zone_type.setter
+    def zone_type(self, zone_type: ZoneType) -> None:
+        self._zone_type = zone_type
+
+
+# endregion Zone
 
 # region Vehicle
 
@@ -639,15 +735,16 @@ class Vehicle(BaseVehicle):
 
     @health.setter
     def health(self, value: float):
-        if self._vehicle_variable is not None:
+        if self._vehicle_variable is not None and self.is_registered:
             dbid: int = self._vehicle_variable.dbid
 
             with VEHICLE_SESSION() as session:
                 vehicle_data: VehicleData = session.query(VehicleData).filter(VehicleData.id == dbid).first()
                 vehicle_data.health = float(value)
-                self.set_health(float(value))
-                self._vehicle_variable.health = float(value)
                 session.commit()
+
+        self.set_health(float(value))
+        self._vehicle_variable.health = float(value)
 
     @property
     def skip_check_damage(self) -> bool:
@@ -945,7 +1042,6 @@ def encode_tires(rear_right_tire, front_right_tire, rear_left_tire, front_left_t
 
 # region Gate, GateObject
 
-
 @dataclass
 class GateObject:
     model_id: int
@@ -1046,7 +1142,11 @@ class House:
                 pickup_model = 1273 if house_model.type == 0 else 1272
 
             self._pickup: Pickup = Pickup.create(pickup_model, 1, house_model.entry_x, house_model.entry_y,
-                                                 house_model.entry_z)
+                                                 house_model.entry_z, 0, PickupType.HOUSE)
+
+            PICKUPS[self._pickup.id] = self._pickup
+
+            self._pickup.pickup_type = PickupType.HOUSE
 
             self._label: DynamicTextLabel = DynamicTextLabel.create(f"Házszám: {self._id}",
                                                                     Color.LABEL_RED,
@@ -1197,5 +1297,191 @@ class House:
         with HOUSE_SESSION() as session:
             house_model: HouseModel = session.query(HouseModel).filter(HouseModel.id == self._id).first()
             return house_model.price
+
+
+# endregion House
+
+# region Interior
+
+class Interior:
+    def __init__(self, id: int, x: float, y: float, z: float, interior: int):
+        self.id = id
+        self.zone = DynamicZone.create_sphere(x, y, z, 1.0, interior_id=interior)
+        self.zone.zone_type = ZoneType.BUSINESS_EXIT
+        ZONES[self.zone.id] = self.zone
+
+    @property
+    def x(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            return model.x
+
+    @property
+    def y(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            return model.y
+
+    @property
+    def z(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            return model.z
+
+    @property
+    def a(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            return model.a
+
+    @property
+    def interior(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            return model.interior
+
+
+# endregion
+
+# region Business
+
+
+class Business:
+
+    def __init__(self, id: int):
+        self._id: int = id
+
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == id).first()
+
+            self._pickup: DynamicPickup = DynamicPickup.create(1274, 1, model.x, model.y, model.z, 0)
+
+            self._pickup.pickup_type = PickupType.BUSINESS
+
+            DYNAMIC_PICKUPS[self._pickup.id] = self._pickup
+
+            self._label: DynamicTextLabel = DynamicTextLabel.create(model.name, Color.WHITE,
+                                                                    model.x, model.y, model.z + 0.6, 25.0)
+
+    @property
+    def pickup(self) -> DynamicPickup:
+        return self._pickup
+
+    @property
+    def label(self) -> DynamicTextLabel:
+        return self._label
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    @property
+    def interior_id(self) -> int:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.interior.in_game_id
+
+    @property
+    def name(self) -> str:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.name
+
+    @name.setter
+    def name(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.name = value
+            session.commit()
+
+    @property
+    def entry_x(self) -> float:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.x
+
+    @entry_x.setter
+    def entry_x(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.x = value
+            session.commit()
+
+    @property
+    def entry_y(self) -> float:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.y
+
+    @entry_y.setter
+    def entry_y(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.y = value
+            session.commit()
+
+    @property
+    def entry_z(self) -> float:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.z
+
+    @entry_z.setter
+    def entry_z(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.z = value
+            session.commit()
+
+    @property
+    def angle(self) -> float:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.a
+
+    @angle.setter
+    def angle(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.a = value
+            session.commit()
+
+    @property
+    def owner(self):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.owner
+
+    @owner.setter
+    def owner(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.owner_id = value
+            session.commit()
+
+    @property
+    def type(self) -> int:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.type
+
+    @property
+    def locked(self) -> bool:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.locked
+
+    @locked.setter
+    def locked(self, value):
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            model.locked = value
+            session.commit()
+
+    @property
+    def price(self) -> int:
+        with BUSINESS_SESSION() as session:
+            model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
+            return model.price
 
 # endregion House

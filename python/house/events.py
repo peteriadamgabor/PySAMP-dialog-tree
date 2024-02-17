@@ -1,9 +1,9 @@
 from pysamp.dialog import Dialog
 from python.house.dialoghandler import handel_for_sale_dialog, handel_owner_dialog, handel_house_guest
-from python.model.server import House
-from python.model.server import Pickup
-from python.model.server import Player
-from python.utils.house import get_house_by_pickup_id
+from python.model.server import House, Business, DynamicPickup, Pickup, Player
+from python.utils.enums.colors import Color
+from python.utils.enums.pickuptype import PickupType
+from python.utils.vars import PICKUPS, HOUSES, DYNAMIC_PICKUPS, BUSINESSES, INTERIORS
 
 
 @Player.on_pick_up_pickup
@@ -13,43 +13,60 @@ def on_player_pick_up_pickup(player: Player, pickup: Pickup):
     if player.check_block_for_pickup():
         return
 
-    house: House = get_house_by_pickup_id(pickup.id)
+    pck: Pickup | DynamicPickup = PICKUPS.get(pickup.id)
 
-    if not house:
-        return
+    if pck is None:
+        pck = DYNAMIC_PICKUPS.get(pickup.id)
 
-    player.dialog_vars["house"] = house
+    match pck.pickup_type:
+        case PickupType.HOUSE:
 
-    title: str = ""
-    content: str = ""
-    button1: str = ""
-    button2: str = ""
-    handler = None
+            house: House = HOUSES[pickup.id]
 
-    if not house.owner:
-        title = "Eladó ház" if house.type == 0 else "Bérelheto ház"
-        content = "Információ\nMegvásárlás" if house.type == 0 else "Információ\nBérlés"
-        button1 = "Kiválaszt"
-        button2 = "Mégsem"
-        handler = handel_for_sale_dialog
+            player.dialog_vars["house"] = house
 
-    if house.owner:
-        name, player_dbid = house.owner.name, house.owner.id
+            title: str = ""
+            content: str = ""
+            button1: str = ""
+            button2: str = ""
+            handler = None
 
-        title = f"{name.replace('_', ' ')} {'tulajdona' if house.type == 0 else 'bérli'}"
-        button1 = "Kiválaszt"
-        button2 = "Mégsem"
+            if not house.owner:
+                title = "Eladó ház" if house.type == 0 else "Bérelheto ház"
+                content = "Információ\nMegvásárlás" if house.type == 0 else "Információ\nBérlés"
+                button1 = "Kiválaszt"
+                button2 = "Mégsem"
+                handler = handel_for_sale_dialog
 
-        if player_dbid == player.dbid:
-            content = (f"Belép\n"
-                       f"{'Kinyit' if house.locked else 'Bezár'}\n"
-                       f"{'Eladás' if house.type == 0 else 'Bérlés felmondása'}"
-                       f"{f'\nBérleti ido meghosszabítása {format(house.price, '3_d').replace("_", " ")} Ft/nap' if house.type == 1 else ''}")
-            handler = handel_owner_dialog
+            if house.owner:
+                name, player_dbid = house.owner.name, house.owner.id
 
-        else:
-            content = (f"Belép\n"
-                       f"Információ")
-            handler = handel_house_guest
+                title = f"{name.replace('_', ' ')} {'tulajdona' if house.type == 0 else 'bérli'}"
+                button1 = "Kiválaszt"
+                button2 = "Mégsem"
 
-    player.show_dialog(Dialog.create(2, title, content, button1, button2, on_response=handler))
+                if player_dbid == player.dbid:
+                    content = (f"Belép\n"
+                               f"{'Kinyit' if house.locked else 'Bezár'}\n"
+                               f"{'Eladás' if house.type == 0 else 'Bérlés felmondása'}"
+                               f"{f'\nBérleti ido meghosszabítása {format(house.price, '3_d').replace("_", " ")} Ft/nap' if house.type == 1 else ''}")
+                    handler = handel_owner_dialog
+
+                else:
+                    content = (f"Belép\n"
+                               f"Információ")
+                    handler = handel_house_guest
+
+            player.show_dialog(Dialog.create(2, title, content, button1, button2, on_response=handler))
+
+        case PickupType.BUSINESS:
+            business: Business = BUSINESSES.get(pickup.id)
+            player.send_client_message(Color.WHITE, f"{business.name}")
+
+            interior = INTERIORS[business.interior_id]
+
+            player.set_pos(interior.x, interior.y, interior.z)
+            player.set_facing_angle(interior.a)
+            player.set_interior(interior.interior)
+            player.set_virtual_world(20_000 + business.id)
+            player.check_used_teleport()

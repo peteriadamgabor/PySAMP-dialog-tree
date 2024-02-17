@@ -1,31 +1,38 @@
-from typing import Tuple, Any, Dict
+from typing import Any
 
 from pysamp import get_max_players
 
-SKINS = []
+SKINS: list = []
 
-ZONES: Dict[int, Tuple[Any, Any]] = dict()
+ZONES: dict[int, Any] = dict()
 
 PLAYER_VARIABLES = [None] * get_max_players()
 LOGGED_IN_PLAYERS = [None] * get_max_players()
 
-HOUSES = []
-HOUSE_TYPES = []
+HOUSES: dict = {}
+HOUSE_TYPES: list = []
 
-ITEMS = []
+BUSINESSES: dict = {}
 
-VEHICLE_MODELS = [None] * 213
-VEHICLE_VARIABLES = [None] * 2001
-VEHICLES = [None] * 2001
+ITEMS: list = []
 
-PERMISSION_TYPES = []
-ROLES = []
-COMMAND_PERMISSIONS = {}
+VEHICLE_MODELS: list = [None] * 213
+VEHICLE_VARIABLES: list = [None] * 2001
+VEHICLES: list = [None] * 2001
 
-FRACTIONS = [None] * 31
-FRACTIONS_BY_CODE = {}
+PERMISSION_TYPES: list = []
+ROLES: list = []
+COMMAND_PERMISSIONS: dict = {}
 
-STATIC_OBJECTS = []
-DYNAMIC_OBJECTS = []
+FRACTIONS: list = [None] * 31
+FRACTIONS_BY_CODE: dict = {}
 
-GATES = []
+PICKUPS: dict = {}
+DYNAMIC_PICKUPS: dict = {}
+
+INTERIORS: dict = {}
+
+STATIC_OBJECTS: list = []
+DYNAMIC_OBJECTS: list = []
+
+GATES: list = []

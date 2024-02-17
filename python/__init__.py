@@ -1,5 +1,6 @@
 from pysamp import on_gamemode_init, on_gamemode_exit
 
+from .model import dispatcher
 from .model import database
 from .server import database
 from .zone import events

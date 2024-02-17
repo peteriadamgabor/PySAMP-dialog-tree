@@ -1,6 +1,5 @@
 from pyeSelect.eselect import MenuItem, Menu
 
-from python.model.dispatcher import cmd
 from python.model.server import Player
 from python.utils.enums.colors import Color
 from python.utils.helpers import list_skins

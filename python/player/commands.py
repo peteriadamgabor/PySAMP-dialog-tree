@@ -1,11 +1,11 @@
 from sqlalchemy import text
 
-from .events import handle_engine_switch
 from .inventory_functions import show_player_inventory
 from python.model.server import Player, Vehicle
 from python.utils.enums.states import State
 from pyeSelect.eselect import Menu, MenuItem
-from ..server.database import MAIN_ENGINE
+from ..model.database import Skin
+from ..server.database import MAIN_ENGINE, MAIN_SESSION
 from ..server.functions import load_teleports
 from ..utils.car import get_model_id_by_name
 from ..utils.enums.colors import Color
@@ -147,28 +147,33 @@ def setskin(player: Player, target: str | int, value: int):
         player.send_client_message(Color.RED, "(( Számmal kell megadni! ))")
         return
 
-    if c_value == 74 or (0 > c_value > len(SKINS) - 1):
-        player.send_client_message(Color.RED, "(( Nincs ilyen skin! ))")
-        return
+    with MAIN_SESSION() as session:
+        skin: Skin = session.query(Skin).filter(Skin.id == value).first()
 
-    if SKINS[c_value].sex != player.sex:
-        player.send_client_message(Color.RED, f"(( Nem hathatsz {'noi' if SKINS[c_value].sex else 'fefi'} "
-                                              f"skint egy {'no' if player.sex else 'fefi'}re! ))")
-        return
+        if skin is None:
+            player.send_client_message(Color.RED, "(( Nincs ilyen skin! ))")
+            return
 
-    target_player.skin = int(c_value)
+        if skin.sex != player.sex:
+            player.send_client_message(Color.RED, f"(( Nem hathatsz {'noi' if SKINS[c_value].sex else 'fefi'} "
+                                                  f"skint egy {'no' if player.sex else 'fefi'}re! ))")
+            return
+
+        target_player.skin = int(c_value)
 
 
 @Player.command
 @Player.using_registry
 def listskins(player: Player):
-    menu = Menu(
-        'Ruhák',
-        [MenuItem(skin.id, str(skin.price) + " Ft") for skin in SKINS if skin.sex == player.sex and skin.id != 74],
-        on_select=change_skin,
-    )
 
-    menu.show(player)
+    with MAIN_SESSION() as session:
+        skins = session.query(Skin).order_by(Skin.id).all()
+        menu = Menu(
+            'Ruhák',
+            [MenuItem(skin.id, str(skin.price) + " Ft") for skin in skins if skin.sex == player.sex and skin.id != 74],
+            on_select=change_skin,
+        )
+        menu.show(player)
 
 
 @Player.using_registry
@@ -353,37 +358,8 @@ def reloadteleports(player: Player):
 
 @Player.using_registry
 @Player.command
-def kor(player: Player, r: float):
-    x, y, z = player.get_pos()
-    player.set_checkpoint(x, y, z, float(r))
-
-
-@Player.using_registry
-@Player.command
 def torol(player: Player):
     player.disable_checkpoint()
-
-
-@Player.using_registry
-@Player.command
-def indit(player: Player):
-    if player.get_state() != State.DRIVER:
-        player.send_client_message(Color.RED, "(( Nem vagy sofor! ))")
-        return
-
-    vehicle: Vehicle = player.get_vehicle()
-    handle_engine_switch(player, vehicle)
-
-
-@Player.using_registry
-@Player.command
-def leallit(player: Player):
-    if player.get_state() != State.DRIVER:
-        player.send_client_message(Color.RED, "(( Nem vagy sofor! ))")
-        return
-
-    vehicle: Vehicle = player.get_vehicle()
-    vehicle.engine = 0
 
 
 @Player.using_registry
