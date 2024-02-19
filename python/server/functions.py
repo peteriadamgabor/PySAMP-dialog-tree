@@ -15,7 +15,7 @@ from python.model.server import Vehicle
 
 
 def server_start():
-    set_game_mode_text("FayRPG 4.0")
+    set_game_mode_text("FayRPG 5.0")
 
     load_houses()
     load_vehicles()
