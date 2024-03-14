@@ -155,7 +155,7 @@ def setskin(player: Player, target: str | int, value: int):
         return
 
     with MAIN_SESSION() as session:
-        skin: Skin = session.query(Skin).filter(Skin.id == value).first()
+        skin: Skin = session.query(Skin).filter(Skin.id == int(value)).first()
 
         if skin is None:
             player.send_client_message(Color.RED, "(( Nincs ilyen skin! ))")
