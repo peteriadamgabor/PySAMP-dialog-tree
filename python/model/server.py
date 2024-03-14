@@ -2,9 +2,11 @@ import math
 import datetime
 import threading
 
-from typing import List, Callable
+from typing import List
 from functools import wraps
 from dataclasses import dataclass
+
+from sqlalchemy import or_
 
 from pysamp.dialog import Dialog
 from pysamp.event import event
@@ -43,22 +45,19 @@ class Player(BasePlayer):
 
         if self._player_vars is None:
             with PLAYER_SESSION() as session:
-                player_db_id = session.query(PlayerModel.id).filter(PlayerModel.in_game_id == player_id).first()
+
+                print("1")
+                player_db_id = session.query(PlayerModel.id).filter(or_(PlayerModel.in_game_id == player_id,
+                                                                    PlayerModel.name == self.get_name())).first()
+
+                print(player_db_id)
 
                 if player_db_id:
                     self.__set_skills()
                     self._player_vars = PlayerVariable(player_db_id[0])
                     self._player_vars.is_registered = True
+                    self._player_vars.login_date = datetime.datetime.now()
                     PLAYER_VARIABLES[player_id] = self._player_vars
-
-                else:
-                    player_db_id = session.query(PlayerModel.id).filter(PlayerModel.name == self.get_name()).first()
-
-                    if player_db_id:
-                        self.__set_skills()
-                        self._player_vars = PlayerVariable(player_db_id[0])
-                        self._player_vars.is_registered = True
-                        PLAYER_VARIABLES[player_id] = self._player_vars
 
     # region Property
     @property
@@ -313,6 +312,10 @@ class Player(BasePlayer):
     @used_teleport.setter
     def used_teleport(self, value: bool):
         self._player_vars.used_teleport = value
+
+    @property
+    def login_date(self):
+        return self._player_vars.login_date
 
     # endregion Property
 
@@ -1313,31 +1316,31 @@ class Interior:
     @property
     def x(self):
         with BUSINESS_SESSION() as session:
-            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            model: InteriorModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
             return model.x
 
     @property
     def y(self):
         with BUSINESS_SESSION() as session:
-            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            model: InteriorModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
             return model.y
 
     @property
     def z(self):
         with BUSINESS_SESSION() as session:
-            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            model: InteriorModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
             return model.z
 
     @property
     def a(self):
         with BUSINESS_SESSION() as session:
-            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            model: InteriorModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
             return model.a
 
     @property
     def interior(self):
         with BUSINESS_SESSION() as session:
-            model: BusinessModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
+            model: InteriorModel = session.query(InteriorModel).filter(InteriorModel.in_game_id == self.id).first()
             return model.interior
 
 
@@ -1460,10 +1463,10 @@ class Business:
             session.commit()
 
     @property
-    def type(self) -> int:
+    def business_type_id(self) -> int:
         with BUSINESS_SESSION() as session:
             model: BusinessModel = session.query(BusinessModel).filter(BusinessModel.id == self._id).first()
-            return model.type
+            return model.business_type.id
 
     @property
     def locked(self) -> bool:

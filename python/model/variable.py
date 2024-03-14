@@ -1,5 +1,9 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, List, Dict
+
+from sqlalchemy import DateTime
+
 from pysamp.player import Player
 
 
@@ -15,6 +19,7 @@ class PlayerVariable:
     used_teleport: bool = False
     in_duty: bool = False
     in_duty_point: bool = False
+    login_date: DateTime = datetime.now
 
     timers: Dict[str, int] = field(default_factory=dict)
     dialog_vars: Dict[str, Any] = field(default_factory=dict)

@@ -322,7 +322,7 @@ class BusinessModel(Base):
     id: int = Column(Integer, primary_key=True)
     in_game_id: int = Column(Integer)
     business_type_id: int = Column(Integer, ForeignKey("business_types.id"))
-    model: "BusinessType" = relationship("BusinessType")
+    business_type: "BusinessType" = relationship("BusinessType")
     interior_id: int = Column(Integer, ForeignKey("interiors.id"))
     interior: "InteriorModel" = relationship("InteriorModel")
     name: str = Column(String)
@@ -335,4 +335,21 @@ class BusinessModel(Base):
     company_chain: int = Column(Integer)
 
 
-Base.metadata.create_all(bind=LOADER_ENGINE)
+class BankAccount(Base):
+    __tablename__ = 'bank_accounts'
+    __allow_unmapped__ = True
+
+    id: int = Column(Integer, primary_key=True)
+    number: str = Column(String)
+    password: str = Column(String)
+    balance: float = Column(Float)
+    owner_id: int = Column(ForeignKey("players.id"))
+    owner: "PlayerModel" = relationship("PlayerModel")
+    business_id: int = Column(ForeignKey("business.id"))
+    business: "BusinessModel" = relationship("BusinessModel")
+    fraction_id: int = Column(ForeignKey("fractions.id"))
+    fraction: "Fraction" = relationship("Fraction")
+    is_default: bool = Column(Boolean)
+
+
+Base.metadata.create_all(bind=LOADER_ENGINE, checkfirst=True)

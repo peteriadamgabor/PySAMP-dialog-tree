@@ -24,15 +24,13 @@ def debug(player: Player):
         user_data = DialogTreeNode("user_data", DialogStyle.LIST, "User data management",
                                    "", "Select", "Back",
                                    custom_content_handler=user_data_context_handler,
-                                   stay_if_none=True,
-                                   custom_content_handler_node_parameters=("user_management.dbid",),
-                                   )
+                                   custom_content_handler_node_parameters=("user_management.dbid",))
 
         user_money_editor = DialogTreeNode("user_money_editor", DialogStyle.INPUT,
                                            "User data management - Money editor",
                                            f"Enter the user new money. Current: #user_data.money# Ft",
                                            "Save", "Back",
-                                           back_after_save=True,
+                                           back_after_input=True,
                                            custom_handler=user_data_money_handler,
                                            custom_handler_node_parameters=("user_management.dbid",))
 
@@ -43,6 +41,7 @@ def debug(player: Player):
     user_data.add_child(None)
     user_data.add_child(None)
     user_data.add_child(user_money_editor)
+    user_data.add_child(None)
 
     dialog_tree.show_root_dialog(player)
 

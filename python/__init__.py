@@ -1,3 +1,6 @@
+import samp
+samp.config(encoding='cp1250')
+
 from pysamp import on_gamemode_init, on_gamemode_exit
 
 from .model import dispatcher
@@ -9,14 +12,14 @@ from . import utils
 from . import player
 from . import house
 from . import vehicle
+from . import business
 
 from .server.functions import server_start, set_up_py_samp
+
 
 @on_gamemode_init
 def server_init():
     try:
-
-        # samp.config(encoding="utf-8")
 
         set_up_py_samp()
 

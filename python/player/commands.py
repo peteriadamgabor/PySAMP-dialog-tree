@@ -1,3 +1,4 @@
+from  datetime import  datetime
 from sqlalchemy import text
 
 from .inventory_functions import show_player_inventory
@@ -19,6 +20,12 @@ from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
 @Player.using_registry
 def penztarca(player: Player):
     player.send_client_message(-1, f"((A pénztárcádban jelenleg {{00C0FF}} {player.money}Ft {{FFFFFF}}van.))")
+
+
+@Player.command
+@Player.using_registry
+def ido(player: Player):
+    player.send_client_message(-1, f"((A pontos idő: {{00C0FF}} {datetime.now():%Y.%m.%d %X} {{FFFFFF}}))")
 
 
 @Player.command
@@ -165,7 +172,6 @@ def setskin(player: Player, target: str | int, value: int):
 @Player.command
 @Player.using_registry
 def listskins(player: Player):
-
     with MAIN_SESSION() as session:
         skins = session.query(Skin).order_by(Skin.id).all()
         menu = Menu(
@@ -365,7 +371,6 @@ def torol(player: Player):
 @Player.using_registry
 @Player.command
 def fixveh(player: Player):
-
     vehicle: Vehicle = player.get_vehicle()
 
     if vehicle:
@@ -377,9 +382,23 @@ def fixveh(player: Player):
 @Player.using_registry
 @Player.command
 def setvehhp(player: Player, health: float):
-
     vehicle: Vehicle = player.get_vehicle()
 
     if vehicle:
         vehicle.skip_check_damage = True
         vehicle.health = health
+
+
+@Player.command
+@Player.using_registry
+def asegit(player: Player, target: str | int):
+    target_player: Player | None = is_valid_player(target)
+
+    if target_player is None:
+        player.send_client_message(Color.WHITE, "(( Nincs ilyen játékos! ))")
+        return
+
+    target_player.set_drunk_level(0)
+    target_player.apply_animation("PED", "getup_front", 4.0, False, False, False, False, 0, True)
+    player.send_client_message(Color.GREEN, "(( Játékos sikeresen felsegítve! ))")
+    target_player.send_client_message(Color.GREEN, "(( Egy admin felsegített! ))")

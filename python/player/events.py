@@ -141,7 +141,7 @@ def finished_downloading(player: Player, vw):
         player.toggle_spectating(True)
         set_timer(set_spawn_camera, 100, False, player)
 
-        player.game_text("~b~Betoltes folyamatban...", 1500, 3)
+        player.game_text("~b~Betöltés folyamatban...", 1500, 3)
 
         set_timer(handle_player_logon, 1500, False, player)
 
