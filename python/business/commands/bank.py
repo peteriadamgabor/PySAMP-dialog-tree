@@ -1,4 +1,4 @@
-from python.business.function import deposit_handler, deposit_bank_validator, list_player_bank_accounts, \
+from python.business.functions.bank import deposit_handler, deposit_bank_validator, list_player_bank_accounts, \
     create_new_bank_account, check_bank_password, withdrawal_handler, change_password_bank_account, \
     bank_info_content_handler
 from python.dialogtree.dialogtree import DialogTreeNode, DialogTree

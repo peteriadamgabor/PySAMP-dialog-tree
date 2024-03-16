@@ -118,7 +118,7 @@ class Player(BasePlayer):
             with PLAYER_SESSION() as session:
                 player_model: PlayerModel = session.query(PlayerModel).filter(PlayerModel.id == dbid).first()
                 skin: Skin = session.query(Skin).filter(Skin.id == value).first()
-                self.set_skin(skin.id if skin.dl_id is None else skin.dl_id)
+                super().set_skin(skin.id if skin.dl_id is None else skin.dl_id)
                 player_model.skin = skin
                 session.commit()
 
@@ -396,6 +396,12 @@ class Player(BasePlayer):
 
     def hide_game_text(self, style):
         call_native_function("HideGameTextForPlayer", self.id, style)
+
+    def set_skin(self, skin_id: int) -> bool:
+        with PLAYER_SESSION() as session:
+            skin: Skin = session.query(Skin).filter(Skin.id == skin_id).first()
+            super().set_skin(skin.id if skin.dl_id is None else skin.dl_id)
+            self.skin = skin
 
     # endregion
 

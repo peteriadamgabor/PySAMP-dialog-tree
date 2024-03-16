@@ -1,15 +1,16 @@
-from pysamp.dialog import Dialog
-from python.house.dialoghandler import handel_for_sale_dialog, handel_owner_dialog, handel_house_guest
-from python.model.server import House, Business, DynamicPickup, Pickup, Player
-from python.utils.enums.colors import Color
+from python.dialogtree.dialogtree import DialogTree, DialogTreeNode
+from python.house.functions import print_house_info, buy_house, enter_house, lock_house, sell_house, cancel_rent, \
+    rent_house
+from python.model.server import House, DynamicPickup, Pickup, Player
+from python.utils.enums.dialog_style import DialogStyle
 from python.utils.enums.pickuptype import PickupType
-from python.utils.vars import PICKUPS, HOUSES, DYNAMIC_PICKUPS, BUSINESSES, INTERIORS
+from python.utils.python_helpers import format_numbers
+from python.utils.vars import PICKUPS, HOUSES, DYNAMIC_PICKUPS
 
 
 @Player.on_pick_up_pickup
 @Player.using_registry
 def on_player_pick_up_pickup(player: Player, pickup: Pickup):
-
     if player.check_block_for_pickup():
         return
 
@@ -18,55 +19,132 @@ def on_player_pick_up_pickup(player: Player, pickup: Pickup):
     if pck is None:
         pck = DYNAMIC_PICKUPS.get(pickup.id)
 
-    match pck.pickup_type:
-        case PickupType.HOUSE:
+    if pck is None or pck.pickup_type != PickupType.HOUSE:
+        return
 
-            house: House = HOUSES[pickup.id]
+    dialog_tree: DialogTree | None = None
 
-            player.dialog_vars["house"] = house
+    house: House = HOUSES[pickup.id]
 
-            title: str = ""
-            content: str = ""
-            button1: str = ""
-            button2: str = ""
-            handler = None
+    info_node: DialogTreeNode = DialogTreeNode("info_node", DialogStyle.MSGBOX,
+                                               "", "", "", "", just_action=True,
+                                               custom_handler=print_house_info,
+                                               custom_handler_parameters=(house,))
 
-            if not house.owner:
-                title = "Eladó ház" if house.type == 0 else "Bérelheto ház"
-                content = "Információ\nMegvásárlás" if house.type == 0 else "Információ\nBérlés"
-                button1 = "Kiválaszt"
-                button2 = "Mégsem"
-                handler = handel_for_sale_dialog
+    enter_node: DialogTreeNode = DialogTreeNode("enter_node", DialogStyle.MSGBOX,
+                                                "", "", "", "", just_action=True,
+                                                custom_handler=enter_house,
+                                                custom_handler_parameters=(house,))
 
-            if house.owner:
-                name, player_dbid = house.owner.name, house.owner.id
+    lock_node: DialogTreeNode = DialogTreeNode("lock_node", DialogStyle.MSGBOX,
+                                               "", "", "", "", just_action=True,
+                                               custom_handler=lock_house,
+                                               custom_handler_parameters=(house,))
 
-                title = f"{name.replace('_', ' ')} {'tulajdona' if house.type == 0 else 'bérli'}"
-                button1 = "Kiválaszt"
-                button2 = "Mégsem"
+    player.dialog_vars["house"] = house
 
-                if player_dbid == player.dbid:
-                    content = (f"Belép\n"
-                               f"{'Kinyit' if house.locked else 'Bezár'}\n"
-                               f"{'Eladás' if house.type == 0 else 'Bérlés felmondása'}"
-                               f"{f'\nBérleti ido meghosszabítása {format(house.price, '3_d').replace("_", " ")} Ft/nap' if house.type == 1 else ''}")
-                    handler = handel_owner_dialog
+    if not house.owner:
+        if house.type == 0:
+            buy_house_root: DialogTreeNode = DialogTreeNode("no_owner_root", DialogStyle.LIST,
+                                                            "Eladó ház", "Információ\nMegvásárlás",
+                                                            "Kiválaszt", "Bezár")
 
-                else:
-                    content = (f"Belép\n"
-                               f"Információ")
-                    handler = handel_house_guest
+            buy_node_content: str = ("{{FFFFFF}}Biztos meg akarja vásárolni a házat {{b4a2da}} " +
+                                     format_numbers(house.price + house.house_type.price) +
+                                     " {{FFFFFF}}Ft ért?")
 
-            player.show_dialog(Dialog.create(2, title, content, button1, button2, on_response=handler))
+            buy_node: DialogTreeNode = DialogTreeNode("buy_node", DialogStyle.MSGBOX,
+                                                      "Ház vásárlás", buy_node_content,
+                                                      "Megvesz", "Mégsem",
+                                                      custom_handler=buy_house,
+                                                      custom_handler_parameters=(house,),
+                                                      close_in_end=True)
 
-        case PickupType.BUSINESS:
-            business: Business = BUSINESSES.get(pickup.id)
-            player.send_client_message(Color.WHITE, f"{business.name}")
+            buy_house_root.add_child(info_node)
+            buy_house_root.add_child(buy_node)
 
-            interior = INTERIORS[business.interior_id]
+            dialog_tree = DialogTree(buy_house_root)
 
-            player.set_pos(interior.x, interior.y, interior.z)
-            player.set_facing_angle(interior.a)
-            player.set_interior(interior.interior)
-            player.set_virtual_world(20_000 + business.id)
-            player.check_used_teleport()
+        if house.type == 1:
+            rent_house_root: DialogTreeNode = DialogTreeNode("no_rented_root", DialogStyle.LIST,
+                                                             "Bérelhető ház", "Információ\nBérlés",
+                                                             "Kiválaszt", "Bezár")
+
+            rent_node_content: str = ("{{FFFFFF}}Hány napig szertné bérbe venni a lakást? {{FFFFFF}}\n"
+                                      "Ár: {{b4a2da}} " + format_numbers(house.price + house.house_type.price) +
+                                      "{{FFFFFF}} Ft / nap ")
+
+            rent_node: DialogTreeNode = DialogTreeNode("rent_node", DialogStyle.MSGBOX,
+                                                       "Ház vásárlás", rent_node_content,
+                                                       "Megvesz", "Mégsem",
+                                                       custom_handler=rent_house,
+                                                       custom_handler_parameters=(house,),
+                                                       close_in_end=True)
+
+            rent_house_root.add_child(info_node)
+            rent_house_root.add_child(rent_node)
+
+            dialog_tree = DialogTree(rent_house_root)
+    elif house.owner:
+        if house.owner.id == player.dbid:
+            if house.type == 0:
+                owned_root = DialogTreeNode("owned_root", DialogStyle.LIST,
+                                            f"{house.id} ház",
+                                            f"Belép\n{'Kinyit' if house.locked else 'Bezár'}\nEladás",
+                                            "Kiválaszt", "Bezár")
+
+                sell_node = DialogTreeNode("sell_node", DialogStyle.MSGBOX,
+                                           "Ház eladás", "{{FFFFFF}}Biztos elakarod adni a házat {{b4a2da}} "
+                                           + format_numbers(house.price + house.house_type.price * .75) +
+                                           "{FFFFF}}Ft ért?", "Igen", "Nem",
+                                           custom_handler=sell_house,
+                                           custom_handler_parameters=(house,))
+
+                owned_root.add_child(enter_node)
+                owned_root.add_child(lock_node)
+                owned_root.add_child(sell_node)
+
+                dialog_tree = DialogTree(owned_root)
+            else:
+                rented_root = DialogTreeNode("rented_root", DialogStyle.LIST,
+                                             f"{house.id} ház",
+                                             f"Belép\n{'Kinyit' if house.locked else 'Bezár'}\n"
+                                             f"Bérlés felmondása\nBérleti ido meghosszabítása "
+                                             f"{format(house.price, '3_d').replace("_", " ")} Ft/nap'",
+                                             "Kiválaszt", "Bezár")
+
+                cancel_rent_node = DialogTreeNode("cancel_rent_node", DialogStyle.MSGBOX,
+                                                  f"{house.id} ház",
+                                                  "{{FFFFFF}}Biztos leakarod mondai a bérlését?"
+                                                  "\n A bérleti díjat nem kapod vissza!", "Igen", "Nem",
+                                                  custom_handler=cancel_rent,
+                                                  custom_handler_parameters=(house,))
+
+                rent_node_content: str = ("{{FFFFFF}}Hány napig szertné bérbe venni a lakást még? {{FFFFFF}}\n"
+                                          "Ár: {{b4a2da}} " + format_numbers(house.price + house.house_type.price) +
+                                          "{{FFFFFF}} Ft / nap ")
+
+                extend_rent_node = DialogTreeNode("extend_rent_node", DialogStyle.MSGBOX,
+                                                  f"{house.id} ház",
+                                                  rent_node_content, "Igen", "Nem",
+                                                  custom_handler=cancel_rent,
+                                                  custom_handler_parameters=(house,))
+
+                rented_root.add_child(enter_node)
+                rented_root.add_child(lock_node)
+                rented_root.add_child(cancel_rent_node)
+                rented_root.add_child(extend_rent_node)
+
+                dialog_tree = DialogTree(rented_root)
+        else:
+            guest_root = DialogTreeNode("guest_root", DialogStyle.LIST,
+                                        f"{house.id} ház",
+                                        "Belép\nInformáció",
+                                        "Kiválaszt", "Bezár")
+
+            guest_root.add_child(enter_node)
+            guest_root.add_child(info_node)
+
+            dialog_tree = DialogTree(guest_root)
+
+    dialog_tree.show_root_dialog(player)

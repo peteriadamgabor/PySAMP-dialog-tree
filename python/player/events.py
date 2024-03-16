@@ -206,7 +206,7 @@ def handel_login_dialog(player: Player, response: int, _, input_text: str) -> No
         player.is_logged_in = True
         LOGGED_IN_PLAYERS[player.id] = player
 
-        player.set_spawn_info(0, player.skin.id, 1287.3256, -1528.6997, 13.5457, 0, 0, 0, 0, 0, 0, 0)
+        player.set_spawn_info(0, player.skin.id if not player.skin.dl_id else player.skin.dl_id, 1287.3256, -1528.6997, 13.5457, 0, 0, 0, 0, 0, 0, 0)
         player.toggle_spectating(False)
         player.set_skin(player.skin.id)
 

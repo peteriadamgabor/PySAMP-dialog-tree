@@ -1,1 +1,2 @@
-from . import command
+from . import events
+from .commands import *
