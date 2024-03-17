@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 from sqlalchemy import text
@@ -9,6 +10,7 @@ from python.model.database import HouseModel, VehicleData, Teleport, DutyLocatio
 from python.server.database import MAIN_SESSION
 from python.model.server import House, DynamicZone, Business, Interior
 from python.server.map_loader import load_maps, load_gates
+from python.utils.python_helpers import print_progress_bar
 from python.utils.vars import *
 from python.utils.enums.zone_type import ZoneType
 from python.model.server import Vehicle
@@ -43,8 +45,9 @@ def load_teleports():
     with MAIN_SESSION() as session:
         teleports = session.query(Teleport).all()
 
-        for i in range(len(teleports)):
-            teleport = teleports[i]
+        print_progress_bar(0, len(teleports), prefix='Creating teleports:', suffix='Complete', fill="=", length=50)
+
+        for i, teleport in enumerate(teleports):
             zone = DynamicZone.create_sphere(teleport.from_x, teleport.from_y, teleport.from_z,
                                              1.0, world_id=teleport.from_vw, interior_id=teleport.from_interior)
 
@@ -53,6 +56,8 @@ def load_teleports():
             ZONES[zone.id] = zone
 
             teleport.in_game_id = zone.id
+
+            print_progress_bar(i + 1, len(teleports), prefix='Creating teleports:', suffix='Complete', fill="=", length=50)
 
         session.commit()
 
@@ -138,7 +143,7 @@ def load_interiors():
         for i in range(len(interiors)):
             interior = interiors[i]
 
-            INTERIORS[i] = Interior(i, interior.x, interior.y, interior.z,  interior.interior)
+            INTERIORS[i] = Interior(i, interior.x, interior.y, interior.z, interior.interior)
 
             interior.in_game_id = i
 

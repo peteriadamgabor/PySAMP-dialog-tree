@@ -85,7 +85,6 @@ def on_update(player: Player):
 
 
 def on_vehicle_damage(player: Player, vehicle: Vehicle, damage: float):
-
     if damage % 5 == 0 and vehicle.skip_check_damage:
         return
 
@@ -167,9 +166,14 @@ def on_key_state_change(player: Player, new_keys: int, old_keys: int):
             player.game_text("~r~Lefulladt az auto", 3000, 3)
 
 
-def handle_player_logon(player: Player):
-    player.game_text("  ", 1000, 2)
+@Player.on_spawn
+@Player.using_registry
+def on_spawn(player: Player):
+    player.set_pos(1287.3256, -1528.6997, 13.5457)
+    player.set_skin(player.skin.id)
 
+
+def handle_player_logon(player: Player):
     player.hide_game_text(3)
 
     if player.is_registered:
@@ -193,7 +197,6 @@ def set_spawn_camera(player: Player):
 
 @Player.using_registry
 def handel_login_dialog(player: Player, response: int, _, input_text: str) -> None:
-
     if not bool(response):
         player.kick_with_reason("(( Nem adtál meg jelszót! ))")
         return
@@ -206,14 +209,16 @@ def handel_login_dialog(player: Player, response: int, _, input_text: str) -> No
         player.is_logged_in = True
         LOGGED_IN_PLAYERS[player.id] = player
 
-        player.set_spawn_info(0, player.skin.id if not player.skin.dl_id else player.skin.dl_id, 1287.3256, -1528.6997, 13.5457, 0, 0, 0, 0, 0, 0, 0)
-        player.toggle_spectating(False)
-        player.set_skin(player.skin.id)
+        player.set_spawn_info(0, 0,
+                              0, 0, 0, 0,
+                              0, 0,
+                              0, 0,
+                              0, 0)
 
         player.send_client_message(Color.GREEN, "(( Sikeresen bejelentkeztél! ))")
+        player.toggle_spectating(False)
 
     else:
         player.send_client_message(Color.RED, "(( Hibás jelszó! ))")
         LOGIN_DIALOG.on_response = handel_login_dialog
         player.show_dialog(LOGIN_DIALOG)
-    return

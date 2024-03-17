@@ -12,14 +12,14 @@ from ..utils.car import get_model_id_by_name
 from ..utils.enums.colors import Color
 from ..utils.globals import MIN_VEHICLE_MODEL_ID, MAX_VEHICLE_MODEL_ID
 from ..utils.player import is_valid_player, get_nearest_gate
-from ..utils.python_helpers import try_pars_int
+from ..utils.python_helpers import try_pars_int, format_numbers
 from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
 
 
 @Player.command
 @Player.using_registry
 def penztarca(player: Player):
-    player.send_client_message(-1, f"((A pénztárcádban jelenleg {{00C0FF}} {player.money}Ft {{FFFFFF}}van.))")
+    player.send_client_message(-1, f"((A pénztárcádban jelenleg {{00C0FF}} {format_numbers(int(player.money))}Ft {{FFFFFF}}van.))")
 
 
 @Player.command

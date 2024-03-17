@@ -26,6 +26,8 @@ def exit(player: Player):
         player.send_client_message(Color.RED, "(( Nem vagy az ajtónál! ))")
         return
 
+    player.disable_pickup()
+    player.disable_teleport()
     player.set_pos(house.entry_x, house.entry_y, house.entry_z)
     player.set_facing_angle(house.angle)
     player.set_interior(0)

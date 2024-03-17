@@ -45,12 +45,8 @@ class Player(BasePlayer):
 
         if self._player_vars is None:
             with PLAYER_SESSION() as session:
-
-                print("1")
                 player_db_id = session.query(PlayerModel.id).filter(or_(PlayerModel.in_game_id == player_id,
                                                                     PlayerModel.name == self.get_name())).first()
-
-                print(player_db_id)
 
                 if player_db_id:
                     self.__set_skills()
@@ -118,8 +114,10 @@ class Player(BasePlayer):
             with PLAYER_SESSION() as session:
                 player_model: PlayerModel = session.query(PlayerModel).filter(PlayerModel.id == dbid).first()
                 skin: Skin = session.query(Skin).filter(Skin.id == value).first()
+
                 super().set_skin(skin.id if skin.dl_id is None else skin.dl_id)
                 player_model.skin = skin
+
                 session.commit()
 
     @property
@@ -361,7 +359,6 @@ class Player(BasePlayer):
         return x, y
 
     def check_block_for_pickup(self) -> bool:
-
         if self.block_for_pickup:
             return True
 
@@ -369,6 +366,10 @@ class Player(BasePlayer):
         set_timer(_enable_pickup, 1000 * 6, False, self)
 
         return False
+
+    def disable_pickup(self) -> None:
+        self.block_for_pickup = True
+        set_timer(_enable_pickup, 1000 * 6, False, self)
 
     def check_used_teleport(self) -> bool:
 
@@ -380,9 +381,13 @@ class Player(BasePlayer):
 
         return False
 
+    def disable_teleport(self) -> None:
+        self.block_for_pickup = True
+        set_timer(_enable_pickup, 1000 * 6, False, self)
+
     def transfer_money(self, money: int, target: "Player" = None) -> bool:
 
-        if self.money - money < 0:
+        if self.money < money:
             self.send_client_message(Color.RED, "(( Nincs elég pénzed! ))")
             return False
 
@@ -401,7 +406,7 @@ class Player(BasePlayer):
         with PLAYER_SESSION() as session:
             skin: Skin = session.query(Skin).filter(Skin.id == skin_id).first()
             super().set_skin(skin.id if skin.dl_id is None else skin.dl_id)
-            self.skin = skin
+        return True
 
     # endregion
 

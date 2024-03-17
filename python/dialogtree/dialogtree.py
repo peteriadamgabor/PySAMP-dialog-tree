@@ -202,11 +202,14 @@ class DialogTreeNode:
 
             custom_handler_result = self.custom_handler(player, response, list_item, input_text, *args)
 
+            if self.just_action:
+                return
+
             if not custom_handler_result and self.stay_if_none:
                 self.show(player)
                 return
 
-        if self.just_action or self.back_after_input:
+        if self.back_after_input:
             self.parent.show(player)
             return
 

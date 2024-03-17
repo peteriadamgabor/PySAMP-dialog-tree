@@ -6,13 +6,14 @@ from pysamp import on_gamemode_init, on_gamemode_exit
 from .model import dispatcher
 from .model import database
 from .server import database
-from .zone import events
+from . import zone
+from . import events
 from . import command
 from . import utils
 from . import player
+from . import business
 from . import house
 from . import vehicle
-from . import business
 
 from .server.functions import server_start, set_up_py_samp
 

@@ -2,8 +2,6 @@ import datetime
 
 from python.model.server import House, Player
 from python.utils.enums.colors import Color
-from python.utils.python_helpers import try_pars_int
-
 
 def print_house_info(player: Player, response: int, list_item: int, input_text: str, *args, **kwargs):
     house: House = args[0]
@@ -30,6 +28,7 @@ def buy_house(player: Player, response: int, list_item: int, input_text: str, *a
     house.owner = player.dbid
 
 
+@Player.using_registry
 def rent_house(player: Player, response: int, list_item: int, input_text: str, *args, **kwargs):
     house: House = args[0]
 
@@ -46,6 +45,7 @@ def rent_house(player: Player, response: int, list_item: int, input_text: str, *
 
     player.send_client_message(Color.GREEN, f"(( Sikeresen kibérelted a(z) {{AA3333}}{house.id}{{33AA33}} számú házat!")
     player.send_client_message(Color.GREEN, f"(( {input_text} napra! Bérlés lejárata: {house.rent_date} ))")
+
 
 def lock_house(player: Player, response: int, list_item: int, input_text: str, *args, **kwargs):
     house: House = args[0]
@@ -72,9 +72,10 @@ def cancel_rent(player: Player, response: int, list_item: int, input_text: str, 
 
     house.owner = None
     player.send_client_message(Color.GREEN, "(( Sikeresen lemondtad a bérlést! ))")
-    house.pickup.set_model(1273)
+    house.pickup.set_model(1272)
 
 
+@Player.using_registry
 def extend_rent(player: Player, response: int, list_item: int, input_text: str, *args, **kwargs):
     house: House = args[0]
 
@@ -83,7 +84,7 @@ def extend_rent(player: Player, response: int, list_item: int, input_text: str, 
 
     days = int(input_text)
 
-    if not player.transfer_money(house.price * days):
+    if not player.transfer_money((house.price + house.house_type.price) * days):
         return
 
     house.rent_date += datetime.timedelta(days=days)
