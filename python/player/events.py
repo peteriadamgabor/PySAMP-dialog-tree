@@ -5,7 +5,7 @@ from pysamp import set_timer
 from python.utils.player import LOGGED_IN_PLAYERS
 from python.utils.enums.states import State
 from python.utils.enums.colors import Color
-from .functions import set_spawn_camera, handle_player_logon
+from .functions import set_spawn_camera, handle_player_logon, on_vehicle_damage
 from ..utils.vars import VEHICLES, PLAYER_VARIABLES
 from ..vehicle.functions import handle_engine_switch
 from python.model.server import Vehicle
@@ -80,8 +80,6 @@ def on_update(player: Player):
 
             if vehicle.is_registered:
                 vehicle.update_damage()
-
-
 
 
 @Player.request_download
