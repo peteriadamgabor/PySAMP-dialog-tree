@@ -1,9 +1,11 @@
-from pysamp import set_timer
+from Cryptodome.Hash import SHA3_512
+
+from pysamp import set_timer, kill_timer
 
 from .dialogs import LOGIN_DIALOG
-from .events import handel_login_dialog
 from python.model.server import Player, Vehicle
 from ..utils.enums.colors import Color
+from ..utils.vars import LOGGED_IN_PLAYERS
 
 
 def handle_player_logon(player: Player):
@@ -69,3 +71,32 @@ def on_vehicle_damage(player: Player, vehicle: Vehicle, damage: float):
 
         veh_player.send_client_message(Color.RED, msg)
         veh_player.set_drunk_level(int(lvl))
+
+
+@Player.using_registry
+def handel_login_dialog(player: Player, response: int, _, input_text: str) -> None:
+    if not bool(response):
+        player.kick_with_reason("(( Nem adtál meg jelszót! ))")
+        return
+
+    h_obj = SHA3_512.new()
+    hash_str = h_obj.update(input_text.encode()).hexdigest()
+
+    if hash_str == player.password:
+        kill_timer(player.timers["login_timer"])
+        player.is_logged_in = True
+        LOGGED_IN_PLAYERS[player.id] = player
+
+        player.set_spawn_info(0, 0,
+                              0, 0, 0, 0,
+                              0, 0,
+                              0, 0,
+                              0, 0)
+
+        player.send_client_message(Color.GREEN, "(( Sikeresen bejelentkeztél! ))")
+        player.toggle_spectating(False)
+
+    else:
+        player.send_client_message(Color.RED, "(( Hibás jelszó! ))")
+        LOGIN_DIALOG.on_response = handel_login_dialog
+        player.show_dialog(LOGIN_DIALOG)
