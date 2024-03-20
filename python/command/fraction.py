@@ -2,7 +2,7 @@ from pyeSelect.eselect import MenuItem, Menu
 
 from python.model.server import Player
 from python.utils.enums.colors import Color
-from python.utils.helpers import list_skins
+from python.utils.helpers import list_fraction_skins
 
 
 @Player.using_registry
@@ -34,7 +34,7 @@ def szolg(player: Player):
 
         menu = Menu(
             'Frakcio ruhak',
-            [MenuItem(skin.id) for skin in player.fraction.skins if skin.sex == player.sex],
+            [MenuItem(skin.id) for skin in list_fraction_skins(player.fraction.id, player.sex)],
             on_select=change_fk_skin,
         )
 
