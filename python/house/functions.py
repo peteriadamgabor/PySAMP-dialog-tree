@@ -3,6 +3,7 @@ import datetime
 from python.model.server import House, Player
 from python.utils.enums.colors import Color
 
+
 def print_house_info(player: Player, response: int, list_item: int, input_text: str, *args, **kwargs):
     house: House = args[0]
 

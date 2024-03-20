@@ -1,19 +1,23 @@
-import time
 from typing import List
 
-from sqlalchemy import text
+from tqdm import tqdm
 
 from pysamp import register_callback, set_game_mode_text
 from pystreamer import register_callbacks
+from python import debugger
+from python.logging import loggers
 
-from python.model.database import HouseModel, VehicleData, Teleport, DutyLocation, Skin, BusinessModel, InteriorModel
+from python.model.database import HouseModel, VehicleData, Teleport, DutyLocation, BusinessModel, InteriorModel
 from python.server.database import MAIN_SESSION
 from python.model.server import House, DynamicZone, Business, Interior
 from python.server.map_loader import load_maps, load_gates
+from python.utils.decorator import get_time
 from python.utils.python_helpers import print_progress_bar
 from python.utils.vars import *
 from python.utils.enums.zone_type import ZoneType
 from python.model.server import Vehicle
+
+tqdm_bar_format = '{desc}: {percentage:3.0f}%% |{bar:50}| {n_fmt}/{total_fmt} [{elapsed}]'
 
 
 def server_start():
@@ -26,12 +30,8 @@ def server_start():
     load_business()
     load_interiors()
 
-    print("Start load maps and gates")
-
     load_maps()
     load_gates()
-
-    print("End load maps and gates")
 
 
 def set_up_py_samp():
@@ -45,9 +45,7 @@ def load_teleports():
     with MAIN_SESSION() as session:
         teleports = session.query(Teleport).all()
 
-        print_progress_bar(0, len(teleports), prefix='Creating teleports:', suffix='Complete', fill="=", length=50)
-
-        for i, teleport in enumerate(teleports):
+        for teleport in tqdm(teleports, desc=f'Loading teleports', bar_format=tqdm_bar_format):
             zone = DynamicZone.create_sphere(teleport.from_x, teleport.from_y, teleport.from_z,
                                              1.0, world_id=teleport.from_vw, interior_id=teleport.from_interior)
 
@@ -57,8 +55,6 @@ def load_teleports():
 
             teleport.in_game_id = zone.id
 
-            print_progress_bar(i + 1, len(teleports), prefix='Creating teleports:', suffix='Complete', fill="=", length=50)
-
         session.commit()
 
 
@@ -66,8 +62,7 @@ def load_duty_locations():
     with MAIN_SESSION() as session:
         duty_locations = session.query(DutyLocation).all()
 
-        for i in range(len(duty_locations)):
-            duty_location = duty_locations[i]
+        for duty_location in tqdm(duty_locations, desc=f'Loading duty points', bar_format=tqdm_bar_format):
             zone = DynamicZone.create_sphere(duty_location.x, duty_location.y, duty_location.z, duty_location.size,
                                              world_id=duty_location.virtual_word, interior_id=duty_location.interior)
 
@@ -84,24 +79,23 @@ def load_houses():
     with MAIN_SESSION() as session:
         house_models = session.query(HouseModel).all()
 
-        for i in range(len(house_models)):
-            house_model = house_models[i]
+        for house_model in tqdm(house_models, desc=f'Loading duty points', bar_format=tqdm_bar_format):
             house = House(house_model.id)
-
             HOUSES[house.pickup.id] = house
+
+        session.commit()
 
 
 def load_business():
     with MAIN_SESSION() as session:
         business_models: List[BusinessModel] = session.query(BusinessModel).all()
 
-        for i in range(len(business_models)):
-            business_model: BusinessModel = business_models[i]
+        for i, business_model in enumerate(tqdm(business_models, desc=f'Loading business', bar_format=tqdm_bar_format)):
             business = Business(business_model.id)
-
             BUSINESSES[business.pickup.id] = business
-
             business.in_game_id = i
+
+        session.commit()
 
 
 def load_vehicles():
@@ -115,11 +109,10 @@ def load_vehicles():
         session.commit()
 
     with MAIN_SESSION() as session:
+
         vehicle_datas = session.query(VehicleData).all()
 
-        for i in range(len(vehicle_datas)):
-            vehicle_data = vehicle_datas[i]
-
+        for vehicle_data in tqdm(vehicle_datas, desc=f'Loading vehicles', bar_format=tqdm_bar_format):
             model_id: int = vehicle_data.model_id + 399
             x: float = vehicle_data.x
             y: float = vehicle_data.y
@@ -135,14 +128,14 @@ def load_vehicles():
 
             VEHICLES[veh.id] = veh
 
+        session.commit()
+
 
 def load_interiors():
     with MAIN_SESSION() as session:
         interiors = session.query(InteriorModel).all()
 
-        for i in range(len(interiors)):
-            interior = interiors[i]
-
+        for i, interior in enumerate(tqdm(interiors, desc=f'Loading interiors', bar_format=tqdm_bar_format)):
             INTERIORS[i] = Interior(i, interior.x, interior.y, interior.z, interior.interior)
 
             interior.in_game_id = i

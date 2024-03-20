@@ -1,10 +1,14 @@
 import json
 import os
 
+from tqdm import tqdm
+
 from pystreamer.dynamicobject import DynamicObject
 from pysamp.object import Object
 from python.model.server import GateObject, Gate
 from python.utils.vars import GATES, STATIC_OBJECTS, DYNAMIC_OBJECTS
+
+tqdm_bar_format = '{desc}: {percentage:3.0f}%% |{bar:50}| {n_fmt}/{total_fmt} [{elapsed}]'
 
 
 def load_maps():
@@ -16,25 +20,26 @@ def load_maps():
 
             objects = json.loads(f.read())
 
-            for object in objects:
-                if object["static"]:
-                    s_object = Object.create(object["model_id"],
-                                             object["x"], object["y"], object["z"],
-                                             object["rotation_x"], object["rotation_y"], object["rotation_z"])
+            for f_object in tqdm(objects, desc=f'Loading {f.name}', bar_format=tqdm_bar_format):
+                if f_object["static"]:
+                    s_object = Object.create(f_object["model_id"],
+                                             f_object["x"], f_object["y"], f_object["z"],
+                                             f_object["rotation_x"], f_object["rotation_y"], f_object["rotation_z"])
 
                     STATIC_OBJECTS.append(s_object)
 
                 else:
-                    d_object = DynamicObject.create(object["model_id"],
-                                                    object["x"], object["y"], object["z"],
-                                                    object["rotation_x"], object["rotation_y"], object["rotation_z"],
-                                                    world_id=object["world_id"],
-                                                    interior_id=object["interior_id"],
-                                                    draw_distance=object["draw_distance"],
-                                                    stream_distance=object["stream_distance"])
+                    d_object = DynamicObject.create(f_object["model_id"],
+                                                    f_object["x"], f_object["y"], f_object["z"],
+                                                    f_object["rotation_x"], f_object["rotation_y"],
+                                                    f_object["rotation_z"],
+                                                    world_id=f_object["world_id"],
+                                                    interior_id=f_object["interior_id"],
+                                                    draw_distance=f_object["draw_distance"],
+                                                    stream_distance=f_object["stream_distance"])
 
-                    if "materials" in object:
-                        for material in object["materials"]:
+                    if "materials" in f_object:
+                        for material in f_object["materials"]:
                             d_object.set_material(material["material_index"],
                                                   material["model_id"],
                                                   material["txd_name"],
@@ -42,8 +47,6 @@ def load_maps():
                                                   material["material_color"])
 
                     DYNAMIC_OBJECTS.append(d_object)
-
-            print(f"| {mapp.replace('.json', '')} map successful loaded. Object Count: {len(objects)} ")
 
 
 def load_gates():
@@ -55,7 +58,7 @@ def load_gates():
 
             gates = json.loads(f.read())
 
-            for gate in gates:
+            for gate in tqdm(gates, desc=f'Loading {f.name}', bar_format=tqdm_bar_format):
                 speed: int
                 auto: bool
                 close_time: int
@@ -89,5 +92,3 @@ def load_gates():
                     py_gate.objects.append(py_gate_object)
 
                 GATES.append(py_gate)
-
-            print(f"| {mapp.replace('.json', '')} gate successful loaded.")

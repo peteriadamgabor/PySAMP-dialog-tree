@@ -29,8 +29,6 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
                                                custom_handler=lock_house,
                                                custom_handler_parameters=(house,))
 
-    player.dialog_vars["house"] = house
-
     if not house.owner:
         if house.type == 0:
             buy_house_root: DialogTreeNode = DialogTreeNode("no_owner_root", DialogStyle.LIST,

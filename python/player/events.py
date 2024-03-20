@@ -8,10 +8,12 @@ from python.utils.player import LOGGED_IN_PLAYERS
 from .dialogs import LOGIN_DIALOG
 from python.utils.enums.states import State
 from python.utils.enums.colors import Color
+from .functions import set_spawn_camera, handle_player_logon
 from ..utils.vars import VEHICLES, PLAYER_VARIABLES
 from ..vehicle.functions import start_engine, handle_engine_switch
 from python.model.server import Vehicle
 from python.model.server import Player
+from python.logging.loggers import exception_logger, debugger
 
 
 @Player.on_request_class
@@ -84,47 +86,6 @@ def on_update(player: Player):
                 vehicle.update_damage()
 
 
-def on_vehicle_damage(player: Player, vehicle: Vehicle, damage: float):
-    if damage % 5 == 0 and vehicle.skip_check_damage:
-        return
-
-    vehicle.skip_check_damage = True
-
-    match vehicle.get_model():
-        case 543 | 605:
-            damage *= 1.95
-
-        case 448 | 461 | 462 | 463 | 468 | 481 | 471 | 509 | 510 | 521 | 522 | 523 | 581 | 586:
-            damage *= 2.95
-
-        case 528:
-            damage *= .35
-
-    for veh_player in vehicle.passengers:
-        if damage < 45:
-            break
-
-        msg: str
-        lvl: float = 2000
-
-        if 45 <= damage <= 69:
-            msg = "(( Könnyeben megsérültél! ))"
-            lvl += (damage / 3) * 100
-
-        elif 70 <= damage <= 109:
-            msg = "(( Súlyosan megsérültél! ))"
-            lvl += 2000 + (damage / 3) * 100
-
-        elif 110 <= damage <= 179:
-            msg = "(( Életveszélyesen megsérültél! ))"
-            lvl += 4000 + (damage / 3) * 100
-
-        else:
-            msg = "(( Szörnyethaltál ))"
-            lvl = 0
-
-        veh_player.send_client_message(Color.RED, msg)
-        veh_player.set_drunk_level(int(lvl))
 
 
 @Player.request_download
@@ -171,28 +132,6 @@ def on_key_state_change(player: Player, new_keys: int, old_keys: int):
 def on_spawn(player: Player):
     player.set_pos(1287.3256, -1528.6997, 13.5457)
     player.set_skin(player.skin.id)
-
-
-def handle_player_logon(player: Player):
-    player.hide_game_text(3)
-
-    if player.is_registered:
-        LOGIN_DIALOG.on_response = handel_login_dialog
-        player.show_dialog(LOGIN_DIALOG)
-        player.timers["login_timer"] = set_timer(player.kick_with_reason, 180000, False,
-                                                 (
-                                                     """((Nem léptél be meghatározott időn belül, "
-                                                     "azért a rendszer kirúgott.))""",)
-                                                 )
-
-    else:
-        player.kick_with_reason("(( Nincs ilyen felhasználó ))")
-
-
-def set_spawn_camera(player: Player):
-    player.set_pos(1122.3563232422, -2036.9317626953, 67)
-    player.set_camera_position(1308.4593505859, -2038.3280029297, 102.23148345947)
-    player.set_camera_look_at(1122.3563232422, -2036.9317626953, 69.543991088867)
 
 
 @Player.using_registry

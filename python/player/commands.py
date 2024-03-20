@@ -3,7 +3,6 @@ from sqlalchemy import text
 
 from .inventory_functions import show_player_inventory
 from python.model.server import Player, Vehicle
-from python.utils.enums.states import State
 from pyeSelect.eselect import Menu, MenuItem
 from ..model.database import Skin
 from ..server.database import MAIN_ENGINE, MAIN_SESSION
@@ -30,7 +29,7 @@ def ido(player: Player):
 
 @Player.command
 @Player.using_registry
-def givemoney(player: Player, target: str | int, value: float):
+def givemoney(player: Player, target: str | int, value: float, *args):
     target_player: Player | None = is_valid_player(target)
 
     if target_player is None:

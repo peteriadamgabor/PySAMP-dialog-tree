@@ -16,15 +16,15 @@ class FayCommand(pysamp.commands.Command):
         self._usage_message.color = 0xFFFFFFAA
 
         self._usage_message.text = ("((" + f'Használat: {list(self.triggers)[0]} ' + ' '.join(
-                    (
-                        f'[{self.arg_names[index]}]'
-                        if self.arg_names is not None and len(self.arg_names) == len(parameters[1:])
-                        else f'[{parameter.name}]'
-                    )
-                    if parameter.default is inspect._empty and parameter.kind != inspect.Parameter.VAR_POSITIONAL
-                    else f'<{parameter.name}>'
-                    for index, parameter in enumerate(parameters[1:])
-                ) + "))")
+            (
+                f'[{self.arg_names[index]}]'
+                if self.arg_names is not None and len(self.arg_names) == len(parameters[1:])
+                else f'[{parameter.name}]'
+            )
+            if parameter.default is inspect._empty and parameter.kind != inspect.Parameter.VAR_POSITIONAL
+            else f'<{parameter.name}>'
+            for index, parameter in enumerate(parameters[1:])
+        ) + "))")
 
 
 _original_cmd = pysamp.commands.cmd
