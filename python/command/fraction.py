@@ -34,7 +34,7 @@ def szolg(player: Player):
 
         menu = Menu(
             'Frakcio ruhak',
-            [MenuItem(skin.id) for skin in list_skins(player.sex)],
+            [MenuItem(skin.id) for skin in player.fraction.skins if skin.sex == player.sex],
             on_select=change_fk_skin,
         )
 
