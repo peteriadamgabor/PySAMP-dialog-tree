@@ -6,6 +6,7 @@ from python.utils.player import LOGGED_IN_PLAYERS
 from python.utils.enums.states import State
 from python.utils.enums.colors import Color
 from .functions import set_spawn_camera, handle_player_logon, on_vehicle_damage
+from .. import exception_logger
 from ..utils.vars import VEHICLES, PLAYER_VARIABLES
 from ..vehicle.functions import handle_engine_switch
 from python.model.server import Vehicle
@@ -14,12 +15,14 @@ from python.model.server import Player
 
 @Player.on_request_class
 @Player.using_registry
+@exception_logger.catch
 def on_request_class(player: Player, _):
     pass
 
 
 @Player.on_connect
 @Player.using_registry
+@exception_logger.catch
 def on_connect(player: Player):
     player.set_color(-1)
 
@@ -29,6 +32,7 @@ def on_connect(player: Player):
 
 @Player.on_disconnect
 @Player.using_registry
+@exception_logger.catch
 def on_disconnect(player: Player, reason: int):
     LOGGED_IN_PLAYERS[player.id] = None
     PLAYER_VARIABLES[player.id] = None
@@ -36,6 +40,7 @@ def on_disconnect(player: Player, reason: int):
 
 @Player.on_state_change
 @Player.using_registry
+@exception_logger.catch
 def on_state_change(player: Player, new_state: int, old_state: int):
     if old_state == State.ON_FOOT and (new_state == State.DRIVER or new_state == State.PASSENGER):
         vehid = player.get_vehicle_id()
@@ -53,6 +58,7 @@ def on_state_change(player: Player, new_state: int, old_state: int):
 
 @Player.on_exit_vehicle
 @Player.using_registry
+@exception_logger.catch
 def on_exit_vehicle(player: Player, vehicle: Vehicle):
     vehicle = VEHICLES[vehicle.id]
 
@@ -63,6 +69,7 @@ def on_exit_vehicle(player: Player, vehicle: Vehicle):
 
 @Player.on_update
 @Player.using_registry
+@exception_logger.catch
 def on_update(player: Player):
     vehicle: Vehicle = player.get_vehicle()
 
@@ -84,12 +91,14 @@ def on_update(player: Player):
 
 @Player.request_download
 @Player.using_registry
+@exception_logger.catch
 def request_download(player: Player, type: int, crc: int):
     return 1
 
 
 @Player.finished_downloading
 @Player.using_registry
+@exception_logger.catch
 def finished_downloading(player: Player, vw):
     if LOGGED_IN_PLAYERS[player.id] is None:
         player.toggle_spectating(True)
@@ -102,6 +111,7 @@ def finished_downloading(player: Player, vw):
 
 @Player.on_key_state_change
 @Player.using_registry
+@exception_logger.catch
 def on_key_state_change(player: Player, new_keys: int, old_keys: int):
     if (new_keys == 512 or new_keys == 520) and player.get_state() == State.DRIVER:
         vehicle: Vehicle = player.get_vehicle()
@@ -123,6 +133,7 @@ def on_key_state_change(player: Player, new_keys: int, old_keys: int):
 
 @Player.on_spawn
 @Player.using_registry
+@exception_logger.catch
 def on_spawn(player: Player):
     player.set_pos(1287.3256, -1528.6997, 13.5457)
     player.set_skin(player.skin.id)
