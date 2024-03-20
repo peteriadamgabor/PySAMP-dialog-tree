@@ -7,7 +7,7 @@ from pysamp.commands import dispatcher as main_dispatcher
 from datetime import datetime
 from time import perf_counter
 
-from pysamp import on_gamemode_init, on_gamemode_exit
+from pysamp import on_gamemode_init
 
 from .logging import sqlalchemy
 from .logging.loggers import exception_logger, debugger, command_logger
