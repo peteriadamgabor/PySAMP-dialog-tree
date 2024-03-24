@@ -31,29 +31,48 @@ class Command:
     split_args: bool
     requires: tuple[Validator, ...]
     error_message: Message
+    args_name: tuple[str, ...]
 
     def __post_init__(self):
         parameters = list(inspect.signature(self.handler).parameters.values())
+
         self._min_params = len([
             parameter
             for parameter in parameters
             if parameter.default is inspect._empty
             and parameter.kind != inspect.Parameter.VAR_POSITIONAL
         ])
+
         self._max_params = len(parameters) if not any(
             parameter.kind == inspect.Parameter.VAR_POSITIONAL
             for parameter in parameters
         ) else None
-        self._usage_message = BaseMessage(
-            text=f'USAGE: {list(self.triggers)[0]} ' + ' '.join(
-                parameter.name
-                if parameter.default is inspect._empty
-                and parameter.kind != inspect.Parameter.VAR_POSITIONAL
-                else f'[{parameter.name}]'
-                for parameter in parameters[1:]
-            ),
-            color=0xFF0000FF,
-        )
+
+        if self.args_name:
+            params = parameters[1:]
+            helper = ""
+
+            for i in range(len(params)):
+
+                if i >= len(self.args_name):
+                    break
+
+                param = params[i]
+                helper += f' [{self.args_name[i]}]' if param.default is inspect._empty and param.kind != inspect.Parameter.VAR_POSITIONAL else f' <{self.args_name[i]}>'
+
+            self._usage_message = BaseMessage(f'(( Használat: {list(self.triggers)[0]} ' + helper, 0xFFFFFFAA)
+
+        else:
+            self._usage_message = BaseMessage(
+                text=f'(( Használat: {list(self.triggers)[0]} ' + ' '.join(
+                    f'[{parameter.name}]'
+                    if parameter.default is inspect._empty
+                    and parameter.kind != inspect.Parameter.VAR_POSITIONAL
+                    else f'<{parameter.name}>'
+                    for parameter in parameters[1:]
+                ) + "))",
+                color=0xFFFFFFAA,
+            )
 
     def handle(self, playerid: int, args_text: str) -> None:
         """Call handler, doing validation and argument splitting."""
@@ -129,8 +148,8 @@ def _NO_FUNCTION(playerid: int, *args: str) -> None: ...
 
 
 DEFAULT_ERROR_MESSAGE = BaseMessage(
-    text='You are not allowed to use this command.',
-    color=0xFF0000FF,
+    text='(( Ismeretlen parancs! ))',
+    color=0xFFFFFFAA,
 )
 
 
@@ -142,6 +161,7 @@ def cmd(
     use_function_name: bool = True,
     split_args: bool = True,
     requires: tuple[Validator, ...] = (),
+    args_name: tuple[str, ...] = (),
     error_message: Message = DEFAULT_ERROR_MESSAGE,
 ) -> Callable[[Any], Any]:
     """Decorate a command handler to register it with the given options.
@@ -172,6 +192,7 @@ def cmd(
             use_function_name=use_function_name,
             split_args=split_args,
             requires=requires,
+            args_name=args_name,
             error_message=error_message,
         )
 
@@ -191,6 +212,7 @@ def cmd(
         handler=function,
         split_args=split_args,
         requires=requires,
+        args_name=args_name,
         error_message=error_message,
     ))
 

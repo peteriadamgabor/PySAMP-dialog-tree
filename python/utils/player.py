@@ -8,14 +8,14 @@ from python.utils.vars import LOGGED_IN_PLAYERS, GATES
 
 
 def _find_player_by_name(name: str):
-    return next((e for e in LOGGED_IN_PLAYERS if name in e.get_name()), None)
+    return next((e for e in LOGGED_IN_PLAYERS if e is not None and name in e.get_name()), None)
 
 
 def _find_player_by_id(id: int):
     return LOGGED_IN_PLAYERS[id]
 
 
-def is_valid_player(search_value: str | int):
+def get_player(search_value: str | int):
     if not search_value:
         return None
 
@@ -24,6 +24,10 @@ def is_valid_player(search_value: str | int):
 
     else:
         return _find_player_by_name(search_value)
+
+
+def check_is_valid_player(search_value: str | int):
+    return get_player(search_value) is None
 
 
 def find_player_in_db_by_name(search_value: str | int):

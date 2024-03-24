@@ -76,7 +76,7 @@ class Role(Base):
 
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String)
-    permissions: "RolePermission" = relationship("RolePermission", primaryjoin="Role.id == RolePermission.role_id")
+    permissions: List["RolePermission"] = relationship("RolePermission", primaryjoin="Role.id == RolePermission.role_id")
 
 
 class DutyLocation(Base):

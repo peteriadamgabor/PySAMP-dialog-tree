@@ -5,7 +5,7 @@ from pysamp import set_timer, kill_timer
 from .dialogs import LOGIN_DIALOG
 from python.model.server import Player, Vehicle
 from ..utils.enums.colors import Color
-from ..utils.vars import LOGGED_IN_PLAYERS
+from ..utils.vars import LOGGED_IN_PLAYERS, ADMIN_PLAYERS
 
 
 def handle_player_logon(player: Player):
@@ -86,6 +86,9 @@ def handel_login_dialog(player: Player, response: int, _, input_text: str) -> No
         kill_timer(player.timers["login_timer"])
         player.is_logged_in = True
         LOGGED_IN_PLAYERS[player.id] = player
+
+        if player.role:
+            ADMIN_PLAYERS[player.id] = player
 
         player.set_spawn_info(0, 0,
                               0, 0, 0, 0,

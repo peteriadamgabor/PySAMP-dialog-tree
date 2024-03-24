@@ -6,13 +6,16 @@ SKINS: list = []
 
 ZONES: dict[int, Any] = dict()
 
-PLAYER_VARIABLES = [None] * get_max_players()
-LOGGED_IN_PLAYERS = [None] * get_max_players()
+PLAYER_VARIABLES: list = [None] * get_max_players()
+LOGGED_IN_PLAYERS: list = [None] * get_max_players()
+ADMIN_PLAYERS: dict = {}
 
 HOUSES: dict = {}
 HOUSE_TYPES: list = []
 
 BUSINESSES: dict = {}
+
+PLAYER_COMMAND: dict = {}
 
 ITEMS: list = []
 

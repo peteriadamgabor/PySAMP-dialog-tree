@@ -315,6 +315,23 @@ class Player(BasePlayer):
     def login_date(self):
         return self._player_vars.login_date
 
+    @property
+    def interior(self) -> int:
+        return self.get_interior()
+
+    @interior.setter
+    def interior(self, interior: int) -> None:
+        self.set_interior(interior)
+
+    @property
+    def virtual_world(self) -> int:
+        return self.get_virtual_world()
+
+    @virtual_world.setter
+    def virtual_world(self, virtual_world: int) -> None:
+        self.set_virtual_world(virtual_world)
+
+
     # endregion Property
 
     # region Functions
@@ -531,7 +548,6 @@ class DynamicPickup(BaseDynamicPickup):
 
 
 # endregion Pickup
-
 
 # region Zone
 
