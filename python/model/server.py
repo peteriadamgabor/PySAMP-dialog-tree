@@ -6,7 +6,7 @@ from typing import List
 from functools import wraps
 from dataclasses import dataclass
 
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 from pysamp.dialog import Dialog
 from pysamp.event import event
@@ -16,7 +16,7 @@ from pystreamer.dynamicobject import DynamicObject
 from pystreamer.dynamictextlabel import DynamicTextLabel
 
 from .database import PlayerModel, Skin, PlayerParameter, Fraction, VehicleData, VehicleModel, HouseModel, HouseType, \
-    BusinessModel, InteriorModel
+    BusinessModel, InteriorModel, InventoryItem, Item
 from python.server.database import PLAYER_SESSION, VEHICLE_SESSION, HOUSE_SESSION, BUSINESS_SESSION
 from python.utils.enums.colors import Color
 from python.utils.vars import VEHICLES, PLAYER_VARIABLES, VEHICLE_VARIABLES, PICKUPS, DYNAMIC_PICKUPS, ZONES
@@ -46,7 +46,7 @@ class Player(BasePlayer):
         if self._player_vars is None:
             with PLAYER_SESSION() as session:
                 player_db_id = session.query(PlayerModel.id).filter(or_(PlayerModel.in_game_id == player_id,
-                                                                    PlayerModel.name == self.get_name())).first()
+                                                                        PlayerModel.name == self.get_name())).first()
 
                 if player_db_id:
                     self.__set_skills()
@@ -244,6 +244,14 @@ class Player(BasePlayer):
         return self._player_vars.is_registered
 
     @property
+    def streamed_players(self):
+        return self._player_vars.streamed_players
+
+    @property
+    def streamed_vehicles(self):
+        return self._player_vars.streamed_vehicles
+
+    @property
     def is_logged_in(self):
         return self._player_vars.is_logged_in
 
@@ -260,6 +268,25 @@ class Player(BasePlayer):
                 player_model: PlayerModel = session.query(PlayerModel).filter(PlayerModel.id == dbid).first()
                 return player_model.items
         return None
+
+    @items.setter
+    def items(self, value):
+        if self._player_vars is not None:
+            dbid: int = self._player_vars.dbid
+
+            with PLAYER_SESSION() as session:
+                player_model: PlayerModel = session.query(PlayerModel).filter(PlayerModel.id == dbid).first()
+                player_model.items = value
+                session.commit()
+
+    def add_item(self, value):
+        if self._player_vars is not None:
+            dbid: int = self._player_vars.dbid
+
+            with PLAYER_SESSION() as session:
+                player_model: PlayerModel = session.query(PlayerModel).filter(PlayerModel.id == dbid).first()
+                player_model.items.append(value)
+                session.commit()
 
     @property
     def role(self):
@@ -330,7 +357,6 @@ class Player(BasePlayer):
     @virtual_world.setter
     def virtual_world(self, virtual_world: int) -> None:
         self.set_virtual_world(virtual_world)
-
 
     # endregion Property
 
@@ -425,17 +451,87 @@ class Player(BasePlayer):
             super().set_skin(skin.id if skin.dl_id is None else skin.dl_id)
         return True
 
+    def send_system_message(self, color: Color, msg: str) -> None:
+        self.send_client_message(color, f"(( {msg} ))")
+
+    def have_enough_item(self, inventory_item_id: int, amount: int = 0) -> bool:
+        with PLAYER_SESSION() as session:
+            if amount > 0:
+                return session.query(InventoryItem).filter(and_(InventoryItem.id == inventory_item_id,
+                                                                InventoryItem.amount >= amount)).first() is not None
+
+            return session.query(InventoryItem).filter(and_(InventoryItem.id == inventory_item_id,
+                                                            InventoryItem.player_id == self.dbid)).first() is not None
+
+    def have_item(self, item_id: int, amount: int = 0) -> bool:
+        with PLAYER_SESSION() as session:
+            if amount > 0:
+                return session.query(InventoryItem).filter(and_(InventoryItem.item.id == item_id,
+                                                                InventoryItem.player_id == self.dbid,
+                                                                InventoryItem.amount >= amount)).first() is not None
+
+            return session.query(InventoryItem).filter(and_(InventoryItem.item.id == item_id,
+                                                            InventoryItem.player_id == self.dbid)).first() is not None
+
+    def get_inventory_item(self, item_id: int) -> "InventoryItem":
+        with PLAYER_SESSION() as session:
+            return session.query(InventoryItem).filter(
+                and_(InventoryItem.item.id == item_id, InventoryItem.player_id == self.dbid)).first()
+
+    def give_item(self, item_id: int, amount: int) -> None:
+        with PLAYER_SESSION() as session:
+            item: "Item" = session.query(Item).filter(Item.id == item_id).first()
+
+            if self.have_item(item_id) and item.is_stackable:
+                inv_item: "InventoryItem" = self.get_inventory_item(item_id)
+                inv_item.amount += amount
+
+            else:
+                new_pii: InventoryItem = InventoryItem(
+                    player_id=self.dbid,
+                    amount=amount,
+                    worn=False,
+                    dead=False,
+                    in_backpack=True
+                )
+                session.add_all(new_pii)
+
+            session.commit()
+
+    def remove_inventory_item(self, inventory_item_id: int) -> None:
+        with PLAYER_SESSION() as session:
+            pii: InventoryItem = session.query(InventoryItem).filter(InventoryItem.id == inventory_item_id).first()
+            del pii
+            session.commit()
+
+    def transfer_item(self, target_player: "Player", inventory_item_id: int, amount: int, robbing: bool = False) -> None:
+        with PLAYER_SESSION() as session:
+            src_inv_item = self.get_inventory_item(inventory_item_id)
+
+            transfer_item = src_inv_item.item
+
+            target_player.give_item(transfer_item.id, amount)
+
+            if src_inv_item.amount - amount == 0 and robbing:
+                del src_inv_item
+            else:
+                src_inv_item.amount -= amount
+
+            session.commit()
+
     # endregion
 
     # region Events
 
+    @classmethod
     @event("OnPlayerRequestDownload")
     def request_download(cls, player_id: int, type: int, crc):
-        return (cls(player_id), type, crc)
+        return cls(player_id), type, crc
 
+    @classmethod
     @event("OnPlayerFinishedDownloading")
     def finished_downloading(cls, player_id: int, virtualworld: int):
-        return (cls(player_id), virtualworld)
+        return cls(player_id), virtualworld
 
     # endregion
 

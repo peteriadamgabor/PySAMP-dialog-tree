@@ -1,5 +1,7 @@
-from python.utils.vars import ITEMS
+from ..model.database import Item
+from ..server.database import PLAYER_SESSION
 
 
-def get_item_by_id(item_id: int):
-    return next((e for e in ITEMS if e.id == item_id), None)
+def is_valid_item_id(item_id: int) -> bool:
+    with PLAYER_SESSION() as session:
+        return session.query(Item).filter(Item.id == item_id).first() is not None

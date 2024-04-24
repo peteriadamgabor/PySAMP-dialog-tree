@@ -2,7 +2,7 @@ from math import sqrt
 
 from sqlalchemy import text
 
-from python.model.server import Gate, GateObject
+from python.model.server import Gate, GateObject, Player
 from python.server.database import PLAYER_ENGINE
 from python.utils.vars import LOGGED_IN_PLAYERS, GATES
 
@@ -31,7 +31,6 @@ def check_is_valid_player(search_value: str | int):
 
 
 def find_player_in_db_by_name(search_value: str | int):
-
     if search_value.isdigit():
         return int(search_value)
     else:
@@ -46,12 +45,11 @@ def find_player_in_db_by_name(search_value: str | int):
 
 
 def get_nearest_gate(player_pos):
-
     nearest_gate: Gate = GATES[0]
     dist = calculate_dist(player_pos,
                           (nearest_gate.objects[0].x, nearest_gate.objects[0].y, nearest_gate.objects[0].z))
 
-    for gate in GATES:
+    for gate in GATES[1:]:
         gate_object: GateObject = gate.objects[0]
 
         now_dist = calculate_dist(player_pos, (gate_object.x, gate_object.y, gate_object.z))
@@ -62,6 +60,36 @@ def get_nearest_gate(player_pos):
 
     if dist <= 5.0:
         return nearest_gate
+    return None
+
+
+def get_nearest_player(player: Player):
+
+    nearest_player = player.streamed_players[0] if len(player.streamed_players) > 0 else None
+
+    start_index: int = 0 if nearest_player is None else 1
+
+    dist = 0.0
+
+    if nearest_player:
+        n_x, n_y, n_z = nearest_player.get_pos()
+        p_x, p_y, p_z = player.get_pos()
+
+        dist = calculate_dist((p_x, p_y, p_z), (n_x, n_y, n_z))
+
+    for check_player in player.streamed_players[start_index:]:
+        if check_player:
+            n_x, n_y, n_z = check_player.get_pos()
+            p_x, p_y, p_z = player.get_pos()
+
+            new_dist = calculate_dist((p_x, p_y, p_z), (n_x, n_y, n_z))
+
+            if dist > new_dist:
+                dist = new_dist
+                nearest_player = check_player
+
+    if dist <= 5.0:
+        return nearest_player
     return None
 
 

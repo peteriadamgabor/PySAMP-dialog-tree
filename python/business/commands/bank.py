@@ -154,6 +154,7 @@ def bank(player: Player):
     bank_root.add_child(deposit_bank)
     bank_root.add_child(operations_root)
 
-    dialog_tree: DialogTree = DialogTree(bank_root)
+    dialog_tree: DialogTree = DialogTree()
+    dialog_tree.add_root(bank_root)
 
     dialog_tree.show_root_dialog(player)

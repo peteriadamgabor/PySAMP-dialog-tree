@@ -1,19 +1,17 @@
-from datetime import datetime
-from sqlalchemy import text
-
 from python.model.server import Player, Vehicle
 from pyeSelect.eselect import Menu, MenuItem
+from ..utils.item import is_valid_item_id
 from .functions import check_player_role_permission, send_admin_action, spawn_admin_car, change_skin
-from ..model.database import Skin, Fraction
-from ..server.database import MAIN_ENGINE, MAIN_SESSION
-from ..server.functions import load_teleports
+from .. import exception_logger
+from ..model.database import Skin
+from ..server.database import MAIN_SESSION
 from ..utils.car import get_model_id_by_name
 from ..utils.enums.colors import Color
 from ..utils.enums.states import State
 from ..utils.globals import MIN_VEHICLE_MODEL_ID, MAX_VEHICLE_MODEL_ID
-from ..utils.player import get_player, get_nearest_gate
+from ..utils.player import get_player
 from ..utils.python_helpers import try_pars_int, format_numbers
-from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
+from ..utils.vars import VEHICLES, SKINS
 
 
 @Player.command(args_name=("id/név", "összeg"), requires=[check_player_role_permission])
@@ -289,7 +287,7 @@ def setvehhp(player: Player, health: float):
         vehicle.health = health
 
 
-@Player.command(args=("id/név",), requires=[check_player_role_permission])
+@Player.command(args_name=("id/név",), requires=[check_player_role_permission])
 @Player.using_registry
 def asegit(player: Player, target: str | int):
     target_player: Player | None = get_player(target)
@@ -302,3 +300,29 @@ def asegit(player: Player, target: str | int):
     target_player.apply_animation("PED", "getup_front", 4.0, False, False, False, False, 0, True)
     player.send_client_message(Color.GREEN, "(( Játékos sikeresen felsegítve! ))")
     target_player.send_client_message(Color.GREEN, "(( Egy admin felsegített! ))")
+
+
+@Player.command(args_name=("id/név", "item id", "mennyiség"), requires=[check_player_role_permission])
+@Player.using_registry
+@exception_logger.catch
+def giveitem(player: Player, target: str | int, item_id: int, amount: int, *args):
+    target_player: Player | None = get_player(target)
+    item_id = int(item_id)
+
+    if target_player is None:
+        player.send_system_message(Color.RED, "Nincs ilyen játékos!")
+        return
+
+    if not is_valid_item_id(item_id):
+        player.send_system_message(Color.RED, "Nincs ilyen item!")
+        return
+
+    if (transfer_amount := try_pars_int(amount)) is None:
+        player.send_system_message(Color.RED, "Számmal kell megadni!")
+        return
+
+    if transfer_amount < 0:
+        player.send_system_message(Color.RED, "Negatív szám nem lehet!")
+        return
+
+    target_player.give_item(item_id, transfer_amount)

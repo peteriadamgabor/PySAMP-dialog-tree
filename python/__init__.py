@@ -27,6 +27,7 @@ from . import business
 from . import house
 from . import vehicle
 from . import admin
+from . import inventory
 
 from .server.functions import server_start, set_up_py_samp
 

@@ -137,3 +137,19 @@ def on_key_state_change(player: Player, new_keys: int, old_keys: int):
 def on_spawn(player: Player):
     player.set_pos(1287.3256, -1528.6997, 13.5457)
     player.set_skin(player.skin.id)
+
+
+@Player.on_stream_in
+@Player.using_registry
+@exception_logger.catch
+def on_stream_in(player: Player, for_player: Player):
+    player.streamed_players.append(for_player)
+
+
+@Player.on_stream_out
+@Player.using_registry
+@exception_logger.catch
+def on_stream_in(player: Player, for_player: Player):
+    for i, p in enumerate(player.streamed_players):
+        if p.id == for_player.id:
+            del player.streamed_players[i]

@@ -1,18 +1,10 @@
 from datetime import datetime
-from sqlalchemy import text
 
-from .inventory_functions import show_player_inventory
-from python.model.server import Player, Vehicle
-from pyeSelect.eselect import Menu, MenuItem
-from ..model.database import Skin
-from ..server.database import MAIN_ENGINE, MAIN_SESSION
-from ..server.functions import load_teleports
-from ..utils.car import get_model_id_by_name
+from python.model.server import Player
 from ..utils.enums.colors import Color
-from ..utils.globals import MIN_VEHICLE_MODEL_ID, MAX_VEHICLE_MODEL_ID
-from ..utils.player import is_valid_player, get_nearest_gate
-from ..utils.python_helpers import try_pars_int, format_numbers
-from ..utils.vars import VEHICLES, LOGGED_IN_PLAYERS, SKINS, FRACTIONS
+from ..utils.player import get_nearest_gate
+from ..utils.python_helpers import format_numbers
+from ..utils.vars import LOGGED_IN_PLAYERS
 
 
 @Player.command
@@ -26,12 +18,6 @@ def penztarca(player: Player):
 @Player.using_registry
 def ido(player: Player):
     player.send_client_message(-1, f"((A pontos idő: {{00C0FF}} {datetime.now():%Y.%m.%d %X} {{FFFFFF}}))")
-
-
-@Player.command
-@Player.using_registry
-def taska(player: Player):
-    show_player_inventory(player)
 
 
 @Player.using_registry

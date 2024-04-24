@@ -12,7 +12,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
     if house is None:
         return 1
 
-    dialog_tree: DialogTree | None = None
+    dialog_tree: DialogTree | None = DialogTree()
 
     info_node: DialogTreeNode = DialogTreeNode("info_node", DialogStyle.MSGBOX,
                                                "", "", "", "", just_action=True,
@@ -49,7 +49,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
             buy_house_root.add_child(info_node)
             buy_house_root.add_child(buy_node)
 
-            dialog_tree = DialogTree(buy_house_root)
+            dialog_tree.add_root(buy_house_root)
 
         if house.type == 1:
             rent_house_root: DialogTreeNode = DialogTreeNode("no_rented_root", DialogStyle.LIST,
@@ -71,7 +71,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
             rent_house_root.add_child(info_node)
             rent_house_root.add_child(rent_node)
 
-            dialog_tree = DialogTree(rent_house_root)
+            dialog_tree.add_root(rent_house_root)
     elif house.owner:
         if house.owner.id == player.dbid:
             if house.type == 0:
@@ -91,7 +91,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
                 owned_root.add_child(lock_node)
                 owned_root.add_child(sell_node)
 
-                dialog_tree = DialogTree(owned_root)
+                dialog_tree.add_root(owned_root)
             else:
                 rented_root = DialogTreeNode("rented_root", DialogStyle.LIST,
                                              f"{house.id} ház",
@@ -123,7 +123,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
                 rented_root.add_child(cancel_rent_node)
                 rented_root.add_child(extend_rent_node)
 
-                dialog_tree = DialogTree(rented_root)
+                dialog_tree.add_root(rented_root)
         else:
             guest_root = DialogTreeNode("guest_root", DialogStyle.LIST,
                                         f"{house.id} ház",
@@ -133,7 +133,7 @@ def on_player_pick_up_pickup_house(player: Player, house: House):
             guest_root.add_child(enter_node)
             guest_root.add_child(info_node)
 
-            dialog_tree = DialogTree(guest_root)
+            dialog_tree.add_root(guest_root)
 
     dialog_tree.show_root_dialog(player)
 

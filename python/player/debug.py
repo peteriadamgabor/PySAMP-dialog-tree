@@ -34,7 +34,9 @@ def debug(player: Player):
                                            custom_handler=user_data_money_handler,
                                            custom_handler_node_parameters=("user_management.dbid",))
 
-    dialog_tree = DialogTree(root_dialog)
+    dialog_tree = DialogTree()
+    dialog_tree.add_root(root_dialog)
+
     root_dialog.add_child(user_management)
 
     user_management.add_child(user_data)

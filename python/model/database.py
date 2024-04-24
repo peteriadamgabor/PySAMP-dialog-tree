@@ -117,6 +117,7 @@ class PlayerParameter(Base):
 
 class ItemData(Base):
     __tablename__ = 'item_data'
+    __allow_unmapped__ = True
 
     item_id = Column(ForeignKey("items.id"), primary_key=True)
     weapon_id: int = Column(Integer)
@@ -140,27 +141,29 @@ class Item(Base):
     data: "ItemData" = relationship("ItemData")
 
 
+class InventoryItemData(Base):
+    __tablename__ = 'inventory_item_data'
+    __allow_unmapped__ = True
+
+    id: int = Column(Integer, primary_key=True)
+    vehicle_id: int = Column(ForeignKey("vehicles.id"))
+    vehicle: "VehicleData" = relationship()
+
+
 class InventoryItem(Base):
     __tablename__ = 'inventory_items'
     __allow_unmapped__ = True
 
     id: int = Column(Integer, primary_key=True)
     item_id: int = Column(ForeignKey("items.id"))
-    item: "Item" = relationship("Item")
-
-
-class PlayerInventoryItem(Base):
-    __tablename__ = 'player_inventor_items'
-    __allow_unmapped__ = True
-
-    id: int = Column(Integer, primary_key=True)
+    item: Item = relationship()
+    inventory_item_data_id: int = Column(ForeignKey("inventory_item_data.id"))
+    inventory_item_data: "InventoryItemData" = relationship()
     player_id: int = Column(ForeignKey("players.id"))
-    inventory_item_id: int = Column(ForeignKey("inventory_items.id"))
-    inventory_item: InventoryItem = relationship()
+    player: "PlayerModel" = relationship("PlayerModel", viewonly=True)
     amount: int = Column(Integer)
     worn: bool = Column(Boolean)
     dead: bool = Column(Boolean)
-    in_backpack: bool = Column(Boolean)
 
 
 class PlayerModel(Base):
@@ -182,7 +185,7 @@ class PlayerModel(Base):
     parameter: "PlayerParameter" = relationship()
     fraction_id: int = Column(ForeignKey("fractions.id"))
     fraction: "Fraction" = relationship()
-    items: List["PlayerInventoryItem"] = relationship("PlayerInventoryItem")
+    items: List["InventoryItem"] = relationship("InventoryItem")
 
 
 class HouseType(Base):

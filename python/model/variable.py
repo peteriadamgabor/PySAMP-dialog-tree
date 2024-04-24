@@ -26,6 +26,8 @@ class PlayerVariable:
     check_points: List = field(default_factory=list)
     houses: List = field(default_factory=list)
     custom_vars: Dict[str, Any] = field(default_factory=dict)
+    streamed_players: List[Any] = field(default_factory=list)
+    streamed_vehicles: List[Any] = field(default_factory=list)
 
 
 @dataclass
