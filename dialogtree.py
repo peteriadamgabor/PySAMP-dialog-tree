@@ -437,7 +437,6 @@ def split_content_by_limit(dialog_style, content: str, max_list_length: int) -> 
             return [content[:max_list_length * 64]]
 
         splitup = content_splitter(content, max_list_length)
-
         pages = len(splitup)
 
         for i in range(pages):
@@ -455,7 +454,6 @@ def split_content_by_limit(dialog_style, content: str, max_list_length: int) -> 
                 splitup[i] += "<<<"
 
         return splitup
-
     return [content]
 
 # endregion helpers
