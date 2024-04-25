@@ -88,8 +88,8 @@ class DialogTreeNode:
             self.__dialog_tree = self.__parent.__dialog_tree
 
     def apply_dialog_tree(self, tree) -> None:
-        self.__dialog_tree = tree
         if self.__dialog_tree is None:
+            self.__dialog_tree = tree
             for i in self.__children:
                 i.apply_dialog_tree(tree)
 
@@ -133,8 +133,6 @@ class DialogTreeNode:
 
         self.dialogs = self.__create_dialogs(content)
 
-        print(self.dialogs)
-
         self.dialogs[0].show(player)
 
     def __create_dialogs(self, content: str) -> list[Dialog]:
@@ -163,6 +161,8 @@ class DialogTreeNode:
         for i in range(page_count):
             items = pages[i].split('\n')
             item_count = len(items)
+            print(pages)
+            print(items)
 
             for j in range(item_count):
                 matches = re.findall(pattern, items[j])
@@ -172,14 +172,14 @@ class DialogTreeNode:
                         prop = match.split("->")[0]
                         value = match.split("->")[1]
 
-                        self.__set_property(prop, value, i, j)
+                        self.__set_property(prop, value, i, j-1)
                         items[j] = items[j].replace(f'#{match}#', value)
 
                     elif "~>" in match:
                         prop = match.split("~>")[0]
                         value = match.split("~>")[1]
 
-                        self.__set_property(prop, value, i, j)
+                        self.__set_property(prop, value, i, j-1)
                         items[j] = items[j].replace(f'#{match}#', "")
 
                     elif "." in match:
@@ -192,11 +192,14 @@ class DialogTreeNode:
 
             c_title = ""
 
-            for match in matches:
-                node_name = match.split(".")[0]
-                prop = match.split(".")[1]
+            if matches:
+                for match in matches:
+                    node_name = match.split(".")[0]
+                    prop = match.split(".")[1]
 
-                c_title = self.title.replace(f'#{match}#', self.__get_node_value(node_name, prop))
+                    c_title = self.title.replace(f'#{match}#', self.__get_node_value(node_name, prop))
+            else:
+                c_title = self.title
 
             page_title = c_title if page_count == 1 else c_title + f" ({str(i + 1)}" + " / " + f"{page_count})"
             clean_content = '\n'.join(items)
@@ -207,6 +210,9 @@ class DialogTreeNode:
             yield page_title, clean_content
 
     def find_node_by_name(self, node_name: str) -> Union["DialogTreeNode", None]:
+
+        if self.node_name.lower() == node_name.lower():
+            return self
 
         for node in self.__children:
             if node.node_name.lower() == node_name.lower():
@@ -354,6 +360,9 @@ class DialogTreeNode:
 
     def __get_node_value(self, node_name: str, property_name: str) -> str:
         node = self.__dialog_tree.root.find_node_by_name(node_name)
+
+        print(self.__dialog_tree.node_variables)
+
         prop_key: str = property_name + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
         return self.__dialog_tree.node_variables[node_name][prop_key]
 
