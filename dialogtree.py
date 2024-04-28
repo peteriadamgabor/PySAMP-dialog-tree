@@ -49,7 +49,7 @@ class DialogTreeNode:
     back_to_root: bool = False
     close_in_end: bool = False
     back_after_input: bool = False
-    stay_if_none: bool = True
+    stay_if_none: bool = False
     save_input: bool = False
     use_same_children: bool = False
     just_action: bool = False
@@ -107,11 +107,8 @@ class DialogTreeNode:
                     self.__parent.execute_custom_handler(player, "", "", "")
                 self.__parent.show(player)
 
-        if self.__parent is None:
-            self.__dialog_tree.node_variables = {}
-
         if self.just_action:
-            self.handler(player, 1, 0, "")
+            self.__handler(player, 1, -1, "-1")
             return
 
         content = self.content
@@ -137,7 +134,7 @@ class DialogTreeNode:
 
     def __create_dialogs(self, content: str) -> list[Dialog]:
 
-        return [Dialog.create(self.dialog_style, f_title, f_content, self.button_1, self.button_2, self.handler)
+        return [Dialog.create(self.dialog_style, f_title, f_content, self.button_1, self.button_2, self.__handler)
                 for f_title, f_content in self.__prepare_content(content)]
 
     def __prepare_content(self, content: str) -> tuple[str, str]:
@@ -155,14 +152,14 @@ class DialogTreeNode:
         pages: list[str] = split_content_by_limit(self.dialog_style, content, self.max_list_length)
         page_count = len(pages)
 
+        shift = 1 if self.dialog_style == DialogStyle.TABLIST_HEADERS else 0
+
         if self.dialog_style == DialogStyle.TABLIST_HEADERS:
             header = pages[0][:pages[0].find('\n') + 2]
 
         for i in range(page_count):
             items = pages[i].split('\n')
             item_count = len(items)
-            print(pages)
-            print(items)
 
             for j in range(item_count):
                 matches = re.findall(pattern, items[j])
@@ -172,14 +169,14 @@ class DialogTreeNode:
                         prop = match.split("->")[0]
                         value = match.split("->")[1]
 
-                        self.__set_property(prop, value, i, j-1)
+                        self.__set_property(prop, value, i, j - shift)
                         items[j] = items[j].replace(f'#{match}#', value)
 
                     elif "~>" in match:
                         prop = match.split("~>")[0]
                         value = match.split("~>")[1]
 
-                        self.__set_property(prop, value, i, j-1)
+                        self.__set_property(prop, value, i, j - shift)
                         items[j] = items[j].replace(f'#{match}#', "")
 
                     elif "." in match:
@@ -209,7 +206,7 @@ class DialogTreeNode:
 
             yield page_title, clean_content
 
-    def find_node_by_name(self, node_name: str) -> Union["DialogTreeNode", None]:
+    def __find_node_by_name(self, node_name: str) -> Union["DialogTreeNode", None]:
 
         if self.node_name.lower() == node_name.lower():
             return self
@@ -219,7 +216,7 @@ class DialogTreeNode:
                 return node
 
             else:
-                r_node = node.find_node_by_name(node_name)
+                r_node = node.__find_node_by_name(node_name)
 
                 if r_node is not None:
                     return r_node
@@ -230,106 +227,133 @@ class DialogTreeNode:
         args: list[str] = self.__get_custom_handler_parameters()
         return self.custom_handler(player, response, list_item, input_text, *args)
 
-    def handler(self, player: Player, response: int, list_item: int, input_text: str):
+    def __handler(self, player: Player, response: int, list_item: int, input_text: str):
 
+        # if the player colse the dialog with the button_2 or ESC or no button_2.
         if not bool(response):
-            if self.exit_on_button_2 or self.__parent is None:
+            if self.exit_on_button_2:
                 return
 
-            if self.jump_to is not None:
-                node = self.__dialog_tree.root.find_node_by_name(self.jump_to)
+            # In this case this is the root of the tree so you need close the dialog
+            if self.__parent is None:
+                return
 
-                if node is not None:
-                    node.show(player)
-                    return
+            if self.__process_jumping(player):
+                return
 
-                else:
-                    self.__parent.show(player)
-                    return
-
+            # back to the tree root node.
             if self.back_to_root:
                 self.__dialog_tree.root.show(player)
                 return
 
+            # just go back to the parent.
             self.__parent.show(player)
             return
 
+        # save the input_text from the dialog.
         if self.save_input:
             self.__dialog_tree.node_variables[self.node_name] = {'input_value': input_text}
 
-        page_move = 1 if "<<<" in input_text else -1 if ">>>" in input_text else 0
-
-        if page_move != 0:
-            self.__active_page_number += page_move
-            self.dialogs[self.__active_page_number].show(player, self.__active_page_number, list_item)
+        if self.__handel_paging(player, list_item, input_text):
             return
 
         self.__selected_page_number: int = self.__active_page_number
         self.__selected_list_item: int = list_item
 
+        if self.__execute_custom_handler(player, list_item, input_text):
+            self.__deciding_next_node(player, list_item)
+            return
+
+        self.__deciding_next_node(player, list_item)
+
+        return
+
+    def __handel_paging(self, player: Player, list_item: int, input_text: str) -> bool:
+        page_move = 1 if "<<<" in input_text else -1 if ">>>" in input_text else 0
+
+        if page_move != 0:
+            self.__active_page_number += page_move
+            self.dialogs[self.__active_page_number].show(player, self.__active_page_number, list_item)
+            return True
+
+        return False
+
+    def __execute_custom_handler(self, player: Player, list_item: int, input_text: str) -> bool:
         if self.custom_handler is not None:
-
-            custom_handler_result = self.execute_custom_handler(player, response, list_item, input_text)
-
-            if self.just_action:
-                if self.back_after_input:
-                    self.__parent.show(player)
-                    return
-                return
+            custom_handler_result = self.execute_custom_handler(player, True, list_item, input_text)
 
             if not custom_handler_result and self.stay_if_none:
                 self.show(player)
-                return
+                return True
+
+            if self.just_action and self.back_after_input:
+                self.__parent.show(player)
+                return True
+
+            if self.just_action:
+                return True
+
+            if self.back_after_input:
+                self.__parent.show(player)
+                return True
+
+            return False
+
+        return False
+
+    def __deciding_next_node(self, player: Player, list_item: int):
+
+        if self.__process_jumping(player):
+            return
 
         if self.back_after_input:
             self.__parent.show(player)
             return
 
-        if len(self.__children) != 0 and list_item <= len(self.__children) - 1:
-            if list_item == -1:
-                self.__children[0].show(player)
-                return
+        if self.use_same_children:
+            self.__children[0].show(player)
+            return
 
-            if len(self.__children) == 1 or self.use_same_children:
-                self.__children[0].show(player)
-                return
+        if self.stay_if_none:
+            self.show(player)
+            return
 
-            if self.__children[list_item] is None:
-                if self.use_same_children:
-                    self.__children[0].show(player)
-                    return
+        if self.back_to_root:
+            self.__dialog_tree.root.show(player)
+            return
 
-                if self.stay_if_none:
-                    self.show(player)
-                    return
+        if self.close_in_end:
+            return
 
-            else:
-                self.__children[list_item].show(player)
-                return
-
-        else:
-            if self.use_same_children:
-                self.__children[0].show(player)
-                return
-
-            if self.stay_if_none:
-                self.show(player)
-                return
-
-            if self.back_to_root:
-                self.__dialog_tree.root.show(player)
-                return
-
-            if self.close_in_end:
-                return
-
+        if list_item > len(self.__children) - 1:
             self.__parent.show(player)
+            return
+
+        self.__children[list_item].show(player)
+
+    def __process_jumping(self, player: Player) -> bool:
+        # The jump_to is contins a node name. Defult None.
+        if self.jump_to is not None:
+
+            # search the node in the tree.
+            node = self.__dialog_tree.root.__find_node_by_name(self.jump_to)
+
+            # if the node is founded we will show the player.
+            if node is not None:
+                node.show(player)
+                return True
+
+            # other hand we go back to tha parent.
+            else:
+                self.__parent.show(player)
+                return True
+        return False
 
     def __get_custom_content_handler_parameters(self):
         args: list[str] = []
 
         if self.custom_content_handler_parameters is not None:
-            args.extend(self.custom_handler_parameters)
+            args.extend(self.custom_content_handler_parameters)
 
         if self.custom_content_handler_node_parameters is not None:
             args.extend(self.__get_parameters(self.custom_content_handler_node_parameters))
@@ -359,10 +383,7 @@ class DialogTreeNode:
         return args
 
     def __get_node_value(self, node_name: str, property_name: str) -> str:
-        node = self.__dialog_tree.root.find_node_by_name(node_name)
-
-        print(self.__dialog_tree.node_variables)
-
+        node = self.__dialog_tree.root.__find_node_by_name(node_name)
         prop_key: str = property_name + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
         return self.__dialog_tree.node_variables[node_name][prop_key]
 
@@ -383,10 +404,8 @@ class DialogTreeNode:
             node_name = raw_parameter.split(".")[0]
             prop = raw_parameter.split(".")[1]
 
-            node = self.__dialog_tree.root.find_node_by_name(node_name)
-
+            node = self.__dialog_tree.root.__find_node_by_name(node_name)
             prop_key: str = prop + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
-
             node_var = self.__dialog_tree.node_variables.get(node_name)
 
             if node_var is not None:
