@@ -1,10 +1,10 @@
 import re
 from dataclasses import dataclass, field
+from typing import Callable, Union, Any
 
 from pysamp.dialog import Dialog
 from pysamp.player import Player
 from python.utils.enums.dialog_style import DialogStyle
-from typing import Callable, Union, Any
 
 
 @dataclass
@@ -54,6 +54,7 @@ class DialogTreeNode:
     use_same_children: bool = False
     just_action: bool = False
     is_guarded_handler: bool = False
+    fixed_first_chiled: bool = False
     custom_handler: Callable[[Player, int, int, str, ...], bool | None] | None = None
     custom_handler_node_parameters: tuple[str, ...] = None
     custom_handler_parameters: tuple[Any] = None
@@ -84,14 +85,15 @@ class DialogTreeNode:
         if child is not None:
             child.__parent = self
 
-        if self.__parent is not None:
-            self.__dialog_tree = self.__parent.__dialog_tree
+            if self.__parent is not None:
+                self.__dialog_tree = self.__parent.__dialog_tree
 
     def apply_dialog_tree(self, tree) -> None:
         if self.__dialog_tree is None:
             self.__dialog_tree = tree
             for i in self.__children:
-                i.apply_dialog_tree(tree)
+                if i is not None:
+                    i.apply_dialog_tree(tree)
 
     def show(self, player: Player):
         """
@@ -180,8 +182,8 @@ class DialogTreeNode:
                         items[j] = items[j].replace(f'#{match}#', "")
 
                     elif "." in match:
-                        node_name = match.split(".")[0]
-                        prop = match.split(".")[1]
+                        node_name = match.split(".")[0].replace("#", "")
+                        prop = match.split(".")[1].replace("#", "")
 
                         items[j] = items[j].replace(f'#{match}#', self.__get_node_value(node_name, prop))
 
@@ -252,7 +254,7 @@ class DialogTreeNode:
 
         # save the input_text from the dialog.
         if self.save_input:
-            self.__dialog_tree.node_variables[self.node_name] = {'input_value': input_text}
+            self.__dialog_tree.node_variables[self.node_name] = {f'input_value_0_-1': input_text}
 
         if self.__handel_paging(player, list_item, input_text):
             return
@@ -310,7 +312,15 @@ class DialogTreeNode:
             self.__parent.show(player)
             return
 
-        if self.use_same_children:
+        if self.fixed_first_chiled and list_item == 0:
+            self.__children[0].show(player)
+            return
+
+        if self.use_same_children and self.fixed_first_chiled and list_item > 1:
+            self.__children[1].show(player)
+            return
+
+        if self.use_same_children and not self.fixed_first_chiled:
             self.__children[0].show(player)
             return
 
@@ -385,7 +395,17 @@ class DialogTreeNode:
     def __get_node_value(self, node_name: str, property_name: str) -> str:
         node = self.__dialog_tree.root.__find_node_by_name(node_name)
         prop_key: str = property_name + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
-        return self.__dialog_tree.node_variables[node_name][prop_key]
+
+        prop_dict = self.__dialog_tree.node_variables.get(node_name)
+
+        if prop_dict is not None:
+
+            prop_val = prop_dict.get(prop_key)
+
+            if prop_val is not None:
+                return prop_val
+
+        return "Nincs"
 
     def __set_property(self, property_name: str, value: str, page: int, row: int) -> None:
         property_key: str = property_name + f"_{str(page)}_{str(row)}"
@@ -401,16 +421,18 @@ class DialogTreeNode:
         args = []
 
         for raw_parameter in raw_parameters:
-            node_name = raw_parameter.split(".")[0]
-            prop = raw_parameter.split(".")[1]
+            node_name = raw_parameter.split(".")[0].replace("#", "")
+            prop = raw_parameter.split(".")[1].replace("#", "")
 
             node = self.__dialog_tree.root.__find_node_by_name(node_name)
-            prop_key: str = prop + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
-            node_var = self.__dialog_tree.node_variables.get(node_name)
 
-            if node_var is not None:
-                node_prop = node_var.get(prop_key)
-                args.append(node_prop)
+            if node is not None:
+                prop_key: str = prop + f"_{str(node.__selected_page_number)}_{str(node.__selected_list_item)}"
+                node_var = self.__dialog_tree.node_variables.get(node_name)
+
+                if node_var is not None:
+                    node_prop = node_var.get(prop_key)
+                    args.append(node_prop)
 
         return args
 
